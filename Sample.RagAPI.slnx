@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Solution items/">
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="SampleRag.Application/SampleRag.Application.csproj" Id="1ecb9172-0e2a-49ee-bc4a-c1435f49fce5" />
+  <Project Path="SampleRag.Domain/SampleRag.Domain.csproj" Id="289f7a68-2682-4af1-8e8c-0e28fbcf8013" />
+  <Project Path="SampleRag.Infrastructure/SampleRag.Infrastructure.csproj" Id="4aa40977-510c-4d6e-b7e7-9e133682bd2f" />
+</Solution>
