@@ -1,10 +1,11 @@
 ﻿using System.Linq.Expressions;
+using SampleRag.Domain.Models;
 
 namespace SampleRag.Application.Interfaces;
 
-public interface IRepository<TId, TModel> 
-    where TId : notnull
-    where TModel : notnull
+public interface IRepository<TId, TModel>
+    where TId : unmanaged
+    where TModel : Entity<TId>
 {
     Task<IEnumerable<TModel>> AddAsync(params TModel[] items);
 

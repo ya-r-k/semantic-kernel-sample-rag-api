@@ -6,7 +6,7 @@ using Microsoft.SemanticKernel.Connectors.Qdrant;
 using OllamaSharp;
 using Qdrant.Client;
 using Quartz;
-using SampleRag.API.Jobs;
+using SampleRag.Application.Jobs;
 using SampleRag.Domain.Models;
 using SampleRagAPI.RagAPI.Classes;
 using SampleRagAPI.RagAPI.Memories;

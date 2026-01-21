@@ -1,19 +1,17 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using MediatR;
+using Microsoft.Extensions.Logging;
 using Quartz;
-using SampleRagAPI.RagAPI.Hubs;
 
-namespace SampleRag.API.Jobs;
+namespace SampleRag.Application.Jobs;
 
 [DisallowConcurrentExecution]
 public class RagGenerationJob(ILogger<RagGenerationJob> logger,
     IServiceProvider serviceProvider,
-    IHubContext<RagMessagesHub> hubContext) : IJob
+    IMediator mediator) : IJob
 {
     public Task Execute(IJobExecutionContext context)
     {
         var dataMap = context.JobDetail.JobDataMap;
-
-        logger.LogInformation("Starting RAG job {JobId} for user {UserId}", jobData.JobId, jobData.UserId);
 
         throw new NotImplementedException();
     }

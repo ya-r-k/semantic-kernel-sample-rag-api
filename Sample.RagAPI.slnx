@@ -3,7 +3,9 @@
     <File Path=".gitignore" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="SampleRag.API/SampleRag.API.csproj" />
   <Project Path="SampleRag.Application/SampleRag.Application.csproj" Id="1ecb9172-0e2a-49ee-bc4a-c1435f49fce5" />
+  <Project Path="SampleRag.Di/SampleRag.Di.csproj" Id="be2bab93-35d3-410e-bc11-867397e5debb" />
   <Project Path="SampleRag.Domain/SampleRag.Domain.csproj" Id="289f7a68-2682-4af1-8e8c-0e28fbcf8013" />
   <Project Path="SampleRag.Infrastructure/SampleRag.Infrastructure.csproj" Id="4aa40977-510c-4d6e-b7e7-9e133682bd2f" />
 </Solution>
