@@ -1,44 +1,28 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Quartz;
+using SampleRag.Application.Interfaces.Services;
 using SampleRag.Domain.Models;
+using System.Runtime.CompilerServices;
 
 namespace SampleRag.API.Endpoints;
 
 public static class MessagesEndpoints
 {
-    public static void MapDataChunkEndpoints(this IEndpointRouteBuilder routes)
+    public static void MapMessagesEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("api/messages").WithTags("Messages");
-        group.MapPost("/", async ([FromBody] MessageData message, ISchedulerFactory schedulerFactory) =>
+        group.MapPost("/", SendUserMessage)
+            .Produces<MessageData>(StatusCodes.Status200OK)
+            .Accepts<MessageData>("application/json");
+    }
+
+    public static async IAsyncEnumerable<MessagePart> SendUserMessage(
+        [FromBody] MessageData message,
+        IMessageService messagesService,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        await foreach (var part in messagesService.GenerateAiResponce(message))
         {
-            var scheduler = await schedulerFactory.GetScheduler();
-            var jobDataMap = new JobDataMap
-            {
-                ["prompt"] = message.Text,
-            };
-
-            if (message.ConversationId.HasValue)
-            {
-                jobDataMap.Add("conversationId", message.ConversationId.Value);
-            }
-
-            await scheduler.TriggerJob(new JobKey("RagResponseGeneration"), jobDataMap);
-
-            return Results.NoContent();
-        });
-
-        group.MapPost("/ids", async ([FromBody] Guid[] ids, IService<DataChunk> service) =>
-        {
-            var chunks = await service.GetByIdsAsync(ids);
-
-            return chunks is not null ? Results.Ok(chunks) : Results.NotFound();
-        });
-
-        group.MapDelete("/ids", async ([FromBody] Guid[] ids, IService<DataChunk> service) =>
-        {
-            await service.RemoveByIdsAsync(ids);
-
-            return Results.NoContent();
-        });
+            yield return part;
+        }
     }
 }
