@@ -6,7 +6,7 @@ using SampleRag.Domain.RequestModels;
 namespace SampleRag.Application.Services;
 
 public class DocumentService(
-    IRepository<int, DocumentData> documentsRepository,
+    IRepository<Guid, DocumentData> documentsRepository,
     IFileRepository fileRepository) : IDocumentService
 {
     public async Task<IEnumerable<DocumentData>> AddAsync(params UploadDocumentRequestModel[] items)
@@ -24,12 +24,12 @@ public class DocumentService(
         return await documentsRepository.AddAsync(savingData);
     }
 
-    public async Task<IEnumerable<DocumentData>> GetByIdsAsync(params int[] ids)
+    public async Task<IEnumerable<DocumentData>> GetByIdsAsync(params Guid[] ids)
     {
         return await documentsRepository.GetByIdsAsync(ids);
     }
 
-    public Task RemoveByIdsAsync(params int[] ids)
+    public Task RemoveByIdsAsync(params Guid[] ids)
     {
         return documentsRepository.RemoveByIdsAsync(ids);
     }

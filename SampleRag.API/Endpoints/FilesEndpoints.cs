@@ -15,7 +15,7 @@ public static class FilesEndpoints
 
             return Results.File(stream, fileDownloadName: fileName, enableRangeProcessing: true);
         })
-            .RequireAuthorization()
+            //.RequireAuthorization()
             .Produces<FileStreamResult>(StatusCodes.Status200OK)
             .Produces<FileStreamResult>(StatusCodes.Status206PartialContent)
             .Produces<FileStreamResult>(StatusCodes.Status401Unauthorized)

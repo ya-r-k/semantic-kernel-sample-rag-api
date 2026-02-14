@@ -1,8 +1,10 @@
-﻿namespace SampleRag.Domain.Models;
+﻿using SampleRag.Domain.Models.Abstractions;
 
-public class DocumentData : Entity<int>
+namespace SampleRag.Domain.Models;
+
+public class DocumentData : IEntity<Guid>
 {
-    public Guid Key { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
 
     public string Name { get; set; } = null!;
 

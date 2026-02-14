@@ -1,6 +1,10 @@
-﻿namespace SampleRag.Domain.Models;
+﻿using SampleRag.Domain.Models.Abstractions;
 
-public class KnowledgeGroupData : Entity<int>
+namespace SampleRag.Domain.Models;
+
+public class KnowledgeGroupData : IEntity<Guid>
 {
+    public Guid Id { get; set; }
+
     public string Name { get; set; }
 }

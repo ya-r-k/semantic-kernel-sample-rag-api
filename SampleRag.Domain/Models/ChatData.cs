@@ -1,7 +1,11 @@
-﻿namespace SampleRag.Domain.Models;
+﻿using SampleRag.Domain.Models.Abstractions;
 
-public class ChatData : Entity<int>
+namespace SampleRag.Domain.Models;
+
+public class ChatData : IEntity<Guid>
 {
+    public Guid Id { get; set; }
+
     public string Name { get; set; }
 
     public int[] UsersIds { get; set; }

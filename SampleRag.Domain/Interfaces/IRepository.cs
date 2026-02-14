@@ -1,11 +1,11 @@
-﻿using System.Linq.Expressions;
-using SampleRag.Domain.Models;
+﻿using SampleRag.Domain.Models.Abstractions;
+using System.Linq.Expressions;
 
 namespace SampleRag.Application.Interfaces;
 
 public interface IRepository<TId, TModel>
     where TId : unmanaged
-    where TModel : Entity<TId>
+    where TModel : IEntity<TId>
 {
     Task<IEnumerable<TModel>> AddAsync(params TModel[] items);
 

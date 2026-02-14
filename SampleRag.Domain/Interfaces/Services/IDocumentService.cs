@@ -7,7 +7,7 @@ public interface IDocumentService
 {
     Task<IEnumerable<DocumentData>> AddAsync(params UploadDocumentRequestModel[] items);
 
-    Task RemoveByIdsAsync(params int[] ids);
+    Task RemoveByIdsAsync(params Guid[] ids);
 
-    Task<IEnumerable<DocumentData>> GetByIdsAsync(params int[] ids);
+    Task<IEnumerable<DocumentData>> GetByIdsAsync(params Guid[] ids);
 }

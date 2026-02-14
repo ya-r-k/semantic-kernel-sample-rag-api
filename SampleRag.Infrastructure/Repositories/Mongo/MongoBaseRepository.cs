@@ -1,13 +1,12 @@
 ﻿using MongoDB.Driver;
 using SampleRag.Application.Interfaces;
-using SampleRag.Domain.Models;
+using SampleRag.Domain.Models.Abstractions;
 using System.Linq.Expressions;
 
 namespace SampleRag.Infrastructure.Repositories.Mongo;
 
-public class MongoBaseRepository<TId, TModel>(IMongoDatabase database) : IRepository<TId, TModel>
-    where TId : unmanaged
-    where TModel : Entity<TId>
+public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<Guid, TModel>
+    where TModel : IEntity<Guid>
 {
     protected readonly IMongoCollection<TModel> _collection = database.GetCollection<TModel>(typeof(TModel).Name);
 
@@ -17,7 +16,7 @@ public class MongoBaseRepository<TId, TModel>(IMongoDatabase database) : IReposi
 
         try
         {
-            await _collection.InsertManyAsync(items, new InsertManyOptions { IsOrdered = false });
+            await _collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = false });
         }
         catch (MongoBulkWriteException<TModel> ex)
         {
@@ -60,14 +59,14 @@ public class MongoBaseRepository<TId, TModel>(IMongoDatabase database) : IReposi
         return await query.ToListAsync();
     }
 
-    public async Task<IEnumerable<TModel>> GetByIdsAsync(params TId[] ids)
+    public async Task<IEnumerable<TModel>> GetByIdsAsync(params Guid[] ids)
     {
         var filter = Builders<TModel>.Filter.In(x => x.Id, ids);
 
         return await _collection.Find(filter).ToListAsync();
     }
 
-    public async Task RemoveByIdsAsync(params TId[] ids)
+    public async Task RemoveByIdsAsync(params Guid[] ids)
     {
         var filter = Builders<TModel>.Filter.In(x => x.Id, ids);
 

@@ -5,8 +5,8 @@ using SampleRag.Domain.Models;
 namespace SampleRag.Application.Services;
 
 public class MessageService(
-    IRepository<int, MessageData> repository,
-    IDataGenerator dataGenerator) : IMessageService
+    IRepository<Guid, MessageData> repository,
+    IDataGenerator dataGenerator) : IMessageService<Guid>
 {
     public async IAsyncEnumerable<MessagePart> GenerateAiResponce(MessageData message, int historyWindow = 30)
     {
@@ -35,12 +35,12 @@ public class MessageService(
         return await repository.AddAsync(items);
     }
 
-    public async Task<IEnumerable<MessageData>> GetByIdsAsync(params int[] ids)
+    public async Task<IEnumerable<MessageData>> GetByIdsAsync(params Guid[] ids)
     {
         return await repository.GetByIdsAsync(ids);
     }
 
-    public async Task RemoveByIdsAsync(params int[] ids)
+    public async Task RemoveByIdsAsync(params Guid[] ids)
     {
         await repository.RemoveByIdsAsync(ids);
     }

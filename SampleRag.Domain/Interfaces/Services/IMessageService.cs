@@ -2,13 +2,13 @@
 
 namespace SampleRag.Application.Interfaces.Services;
 
-public interface IMessageService
+public interface IMessageService<TId> where TId : unmanaged
 {
     IAsyncEnumerable<MessagePart> GenerateAiResponce(MessageData message, int historyWindow = 30);
 
     Task<IEnumerable<MessageData>> AddAsync(params MessageData[] items);
 
-    Task RemoveByIdsAsync(params int[] ids);
+    Task RemoveByIdsAsync(params TId[] ids);
 
-    Task<IEnumerable<MessageData>> GetByIdsAsync(params int[] ids);
+    Task<IEnumerable<MessageData>> GetByIdsAsync(params TId[] ids);
 }

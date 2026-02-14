@@ -17,8 +17,7 @@ public static class MessagesEndpoints
 
     public static async IAsyncEnumerable<MessagePart> SendUserMessage(
         [FromBody] MessageData message,
-        IMessageService messagesService,
-        [EnumeratorCancellation] CancellationToken ct)
+        IMessageService<Guid> messagesService)
     {
         await foreach (var part in messagesService.GenerateAiResponce(message))
         {
