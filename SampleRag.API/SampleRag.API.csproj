@@ -26,7 +26,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Classes\" />
     <Folder Include="wwwroot\assets\documents\" />
   </ItemGroup>
   
