@@ -7,6 +7,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/Dotnet.gitignore
 
+# Spec Driven Development
+**/.specify/templates
+**/.specify/scripts/powershell
+
 # AI IDEs
 **/.cursor
 
