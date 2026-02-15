@@ -8,6 +8,11 @@
   </Folder>
   <Folder Name="/Solution items/">
     <File Path=".gitignore" />
+    <File Path=".cursorignore" />
+    <File Path="project.md" />
     <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Solution items/.specify/">
+    <File Path=".specify/memory/constitution.md" />
   </Folder>
 </Solution>
