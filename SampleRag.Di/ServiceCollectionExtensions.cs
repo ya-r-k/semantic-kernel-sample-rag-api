@@ -14,6 +14,7 @@ using SampleRag.Domain.Models;
 using SampleRag.Domain.Models.Configs;
 using SampleRag.Infrastructure.Repositories.Files;
 using SampleRag.Infrastructure.Repositories.Mongo;
+using SampleRag.Infrastructure.VectorStore;
 
 namespace SampleRag.Di;
 
@@ -26,6 +27,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMapper, ServiceMapper>();
 
         services.AddTransient<IDataGenerator, DataGenerator>();
+        services.AddTransient<IChunkingService, ChunkingService>();
         services.AddTransient<IDocumentService, DocumentService>();
         services.AddTransient<IMessageService<Guid>, MessageService>();
         services.AddTransient<IScopeAccessService, ScopeAccessService>();
@@ -44,6 +46,14 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IRepository<Guid, ChatData>, MongoBaseRepository<ChatData>>();
         services.AddTransient<IRepository<Guid, KnowledgeGroupData>, MongoBaseRepository<KnowledgeGroupData>>();
         services.AddTransient<IScopeUserRepository, ScopeUserRepository>();
+
+        services.AddHttpClient("Qdrant", (sp, client) =>
+        {
+            var cfg = configuration.GetSection(nameof(VectorDbSettings)).Get<VectorDbSettings>();
+            var url = cfg?.Url?.TrimEnd('/').Replace(":6334", ":6333") ?? "http://localhost:6333";
+            client.BaseAddress = new Uri(url);
+        });
+        services.AddTransient<IDocumentChunkStore, DocumentChunkStore>();
 
         services.ConfigureFileAccessLocalDependencies(environment);
     }

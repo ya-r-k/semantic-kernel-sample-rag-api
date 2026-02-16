@@ -1,8 +1,10 @@
-﻿namespace SampleRag.Domain.RequestModels;
+namespace SampleRag.Domain.RequestModels;
 
 public class UploadDocumentRequestModel
 {
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 
-    public FileDataRequestModel File { get; set; }
+    public Guid ScopeId { get; set; }
+
+    public FileDataRequestModel File { get; set; } = null!;
 }

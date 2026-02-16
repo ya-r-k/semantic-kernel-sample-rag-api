@@ -64,11 +64,11 @@ description: 'Task list for Demo RAG API feature implementation'
 
 **Independent Test**: Admin uploads a PDF via API and receives success; document is stored with scopeId. Non-admin upload is rejected with 403. File over 20 MB or non-PDF is rejected with 400.
 
-- [ ] T012 [P] [US1] Add ScopeId to DocumentData and ensure document repository supports scope in SampleRag.Domain/Models/DocumentData.cs and SampleRag.Infrastructure/Repositories
-- [ ] T013 [US1] Implement PDF chunking (PdfPig, page-based, optional sub-split for long pages) in SampleRag.Application/Services (DocumentService or dedicated ChunkingService)
-- [ ] T014 [US1] Implement embedding generation and Qdrant upsert per chunk (Semantic Kernel + Ollama embedding, Qdrant store by scope) in SampleRag.Application/Services
-- [ ] T015 [US1] Implement document upload pipeline: validate admin + scope access, 20 MB max, PDF content-type; save file under wwwroot and DocumentData; trigger chunk + embed + Qdrant in SampleRag.API/Endpoints/DocumentsEndpoints.cs and SampleRag.Application/Services
-- [ ] T016 [US1] Enforce 20 MB max file size and PDF validation in upload pipeline in SampleRag.API/Endpoints/DocumentsEndpoints.cs or Application service
+- [X] T012 [P] [US1] Add ScopeId to DocumentData and ensure document repository supports scope in SampleRag.Domain/Models/DocumentData.cs and SampleRag.Infrastructure/Repositories
+- [X] T013 [US1] Implement PDF chunking (PdfPig, page-based, optional sub-split for long pages) in SampleRag.Application/Services (DocumentService or dedicated ChunkingService)
+- [X] T014 [US1] Implement embedding generation and Qdrant upsert per chunk (Semantic Kernel + Ollama embedding, Qdrant store by scope) in SampleRag.Application/Services
+- [X] T015 [US1] Implement document upload pipeline: validate admin + scope access, 20 MB max, PDF content-type; save file under wwwroot and DocumentData; trigger chunk + embed + Qdrant in SampleRag.API/Endpoints/DocumentsEndpoints.cs and SampleRag.Application/Services
+- [X] T016 [US1] Enforce 20 MB max file size and PDF validation in upload pipeline in SampleRag.API/Endpoints/DocumentsEndpoints.cs or Application service
 
 **Checkpoint**: User Story 1 complete — admin can upload PDFs; content ready for RAG
 

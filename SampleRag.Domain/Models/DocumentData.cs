@@ -1,4 +1,4 @@
-﻿using SampleRag.Domain.Models.Abstractions;
+using SampleRag.Domain.Models.Abstractions;
 
 namespace SampleRag.Domain.Models;
 
@@ -10,9 +10,9 @@ public class DocumentData : IEntity<Guid>
 
     public string LocalLink { get; set; } = null!;
 
-    public string OriginalLink { get; set; } = null!;
+    public string OriginalLink { get; set; } = string.Empty;
 
-    public int[] KnowledgeGroupIds { get; set; } = null!;
+    public Guid ScopeId { get; set; }
 
-    public string BriefDescription { get; set; } = null!;
+    public string BriefDescription { get; set; } = string.Empty;
 }
