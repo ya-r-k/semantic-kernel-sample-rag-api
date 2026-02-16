@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using SampleRag.Application.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
 
@@ -15,6 +15,7 @@ public static class DocumentsEndpoints
 
             return Results.NoContent();
         })
+            .RequireAuthorization("RequireAdministrator")
             .Produces(StatusCodes.Status204NoContent)
             .Accepts<UploadDocumentRequestModel>("application/json");
     }

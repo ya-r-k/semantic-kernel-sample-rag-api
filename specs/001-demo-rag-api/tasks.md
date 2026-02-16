@@ -1,6 +1,5 @@
 ---
-
-description: "Task list for Demo RAG API feature implementation"
+description: 'Task list for Demo RAG API feature implementation'
 ---
 
 # Tasks: Demo RAG API
@@ -26,7 +25,7 @@ description: "Task list for Demo RAG API feature implementation"
 - **Infrastructure**: `SampleRag.Infrastructure/Repositories/`, configuration
 - **DI**: `SampleRag.Di/`
 
-**Terminology**: In this feature, *scope* and *group* refer to the same concept (container for documents and chats). The API exposes it as `/api/groups`; the data model uses Scope (alias KnowledgeGroup).
+**Terminology**: In this feature, _scope_ and _group_ refer to the same concept (container for documents and chats). The API exposes it as `/api/groups`; the data model uses Scope (alias KnowledgeGroup).
 
 ---
 
@@ -34,10 +33,10 @@ description: "Task list for Demo RAG API feature implementation"
 
 **Purpose**: Project initialization, dependencies, and constitution compliance
 
-- [ ] T001 Ensure project structure per plan (SampleRag.API, Application, Domain, Infrastructure, Di) and add any missing folders
-- [ ] T002 Add NuGet packages: PdfPig, Microsoft.AspNetCore.Authentication.JwtBearer (as needed) to SampleRag.API and Application
-- [ ] T003 [P] Configure Mapster global DI registration in SampleRag.Di
-- [ ] T004 [P] Move vector-store mapping off domain models (constitution VII): remove [VectorStoreKey], [VectorStoreData], [VectorStoreVector] from SampleRag.Domain/Models/DocumentPageData.cs (or retire DocumentPageData from Domain); add DocumentChunk DTO and Qdrant payload schema in SampleRag.Infrastructure for vector persistence
+- [x] T001 Ensure project structure per plan (SampleRag.API, Application, Domain, Infrastructure, Di) and add any missing folders
+- [x] T002 Add NuGet packages: PdfPig, Microsoft.AspNetCore.Authentication.JwtBearer (as needed) to SampleRag.API and Application
+- [x] T003 [P] Configure Mapster global DI registration in SampleRag.Di
+- [x] T004 [P] Move vector-store mapping off domain models (constitution VII): remove [VectorStoreKey], [VectorStoreData], [VectorStoreVector] from SampleRag.Domain/Models/DocumentPageData.cs (or retire DocumentPageData from Domain); add DocumentChunk DTO and Qdrant payload schema in SampleRag.Infrastructure for vector persistence
 
 ---
 
@@ -47,13 +46,13 @@ description: "Task list for Demo RAG API feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Implement JWT bearer authentication and RequireAdministrator policy in SampleRag.API (Program.cs or middleware)
-- [ ] T006 Add ScopeUser model in SampleRag.Domain/Models; add IScopeUserRepository in SampleRag.Domain/Interfaces and implement in SampleRag.Infrastructure/Repositories (MongoDB collection ScopeUsers)
-- [ ] T007 Implement scope access enforcement (check user can use scope) in SampleRag.Application/Services for use on upload, chat create, and messages
-- [ ] T008 Fix GET list endpoints to return Results.Ok: ChatsEndpoints.cs and KnowledgeGroupsEndpoints.cs (per plan bug fixes)
-- [ ] T009 Fix MessageData.ChatId type to Guid and align with ChatData.Id in SampleRag.Domain/Models/MessageData.cs
-- [ ] T010 Configure Qdrant client and collection schema (payload: DocumentId, ScopeId, PageNumber, ChunkIndex, Text) in SampleRag.Infrastructure
-- [ ] T011 [P] Implement Scope API: POST /api/groups, GET /api/groups, POST /api/groups/{id}/users, DELETE /api/groups/{id}/users/{userId} in SampleRag.API/Endpoints/KnowledgeGroupsEndpoints.cs (or dedicated ScopesEndpoints) with admin/scope-access auth
+- [x] T005 Implement JWT bearer authentication and RequireAdministrator policy in SampleRag.API (Program.cs or middleware)
+- [x] T006 Add ScopeUser model in SampleRag.Domain/Models; add IScopeUserRepository in SampleRag.Domain/Interfaces and implement in SampleRag.Infrastructure/Repositories (MongoDB collection ScopeUsers)
+- [x] T007 Implement scope access enforcement (check user can use scope) in SampleRag.Application/Services for use on upload, chat create, and messages
+- [x] T008 Fix GET list endpoints to return Results.Ok: ChatsEndpoints.cs and KnowledgeGroupsEndpoints.cs (per plan bug fixes)
+- [x] T009 Fix MessageData.ChatId type to Guid and align with ChatData.Id in SampleRag.Domain/Models/MessageData.cs
+- [x] T010 Configure Qdrant client and collection schema (payload: DocumentId, ScopeId, PageNumber, ChunkIndex, Text) in SampleRag.Infrastructure
+- [x] T011 [P] Implement Scope API: POST /api/groups, GET /api/groups, POST /api/groups/{id}/users, DELETE /api/groups/{id}/users/{userId} in SampleRag.API/Endpoints/KnowledgeGroupsEndpoints.cs (or dedicated ScopesEndpoints) with admin/scope-access auth
 
 **Checkpoint**: Foundation ready — user story implementation can begin
 
@@ -175,20 +174,20 @@ T013: Implement PDF chunking (Application) — then T014, T015, T016 in order
 
 ### MVP First (User Story 1 Only)
 
-1. Complete Phase 1: Setup  
-2. Complete Phase 2: Foundational  
-3. Complete Phase 3: User Story 1  
-4. **STOP and VALIDATE**: Admin upload PDF, confirm stored and chunked; non-admin rejected  
-5. Deploy/demo if ready  
+1. Complete Phase 1: Setup
+2. Complete Phase 2: Foundational
+3. Complete Phase 3: User Story 1
+4. **STOP and VALIDATE**: Admin upload PDF, confirm stored and chunked; non-admin rejected
+5. Deploy/demo if ready
 
 ### Incremental Delivery
 
-1. Setup + Foundational → scope API and auth ready  
-2. Add US1 → upload and ingestion → MVP  
-3. Add US2 → RAG answers with sources  
-4. Add US3 → multi-owner and auto-created chats  
-5. Add US4 → feedback  
-6. Polish and quickstart validation  
+1. Setup + Foundational → scope API and auth ready
+2. Add US1 → upload and ingestion → MVP
+3. Add US2 → RAG answers with sources
+4. Add US3 → multi-owner and auto-created chats
+5. Add US4 → feedback
+6. Polish and quickstart validation
 
 ### Suggested MVP Scope
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using SampleRag.Application.Interfaces.Services;
 using SampleRag.Domain.Models;
 using System.Runtime.CompilerServices;
@@ -11,6 +11,7 @@ public static class MessagesEndpoints
     {
         var group = routes.MapGroup("api/messages").WithTags("Messages");
         group.MapPost("/", SendUserMessage)
+            .RequireAuthorization()
             .Produces<MessageData>(StatusCodes.Status200OK)
             .Accepts<MessageData>("application/json");
     }

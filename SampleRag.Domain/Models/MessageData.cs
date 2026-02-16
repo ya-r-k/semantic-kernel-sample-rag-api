@@ -1,4 +1,4 @@
-﻿using SampleRag.Domain.Models.Abstractions;
+using SampleRag.Domain.Models.Abstractions;
 
 namespace SampleRag.Domain.Models;
 
@@ -12,7 +12,7 @@ public class MessageData : IEntity<Guid>
 
     public DateTime? CreatedAt { get; set; }
 
-    public int ChatId { get; set; }
+    public Guid ChatId { get; set; }
 
     public int[]? DocumentPagesIds { get; set; }
 }

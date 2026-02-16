@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SampleRag.Application.Interfaces;
 using SampleRag.Domain.Models;
 using System.Linq.Expressions;
@@ -10,12 +11,13 @@ public static class ChatsEndpoints
     public static void MapChatsEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("api/chats").WithTags("Chats");
-        group.MapPost("/", async([FromBody] ChatData chat, IRepository<Guid, ChatData> chatsRepository, CancellationToken ct) => 
+        group.MapPost("/", async ([FromBody] ChatData chat, IRepository<Guid, ChatData> chatsRepository, CancellationToken ct) =>
         {
             var result = await chatsRepository.AddAsync(chat);
 
             return Results.Created("api/chats", result);
         })
+            .RequireAuthorization()
             .Produces<ChatData>(StatusCodes.Status201Created)
             .Accepts<ChatData>("application/json");
 
@@ -30,8 +32,10 @@ public static class ChatsEndpoints
 
             var result = await chatsRepository.GetBatchByAsync(expression, batchSize);
 
-            return Results.Created("api/chats", result);
-        }).Produces<ChatData>(StatusCodes.Status200OK);
+            return Results.Ok(result);
+        })
+            .RequireAuthorization()
+            .Produces<ChatData>(StatusCodes.Status200OK);
 
         group.MapDelete("{id}", async (Guid id, IRepository<Guid, ChatData> chatsRepository, CancellationToken ct) =>
         {
@@ -39,6 +43,7 @@ public static class ChatsEndpoints
 
             return Results.NoContent();
         })
+            .RequireAuthorization()
             .Produces<ChatData>(StatusCodes.Status204NoContent)
             .Accepts<ChatData>("application/json");
     }

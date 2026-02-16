@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Hosting;
+using Mapster;
+using MapsterMapper;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
@@ -19,9 +21,14 @@ public static class ServiceCollectionExtensions
 {
     public static void ConfigureDependencies(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
+        var config = TypeAdapterConfig.GlobalSettings;
+        services.AddSingleton(config);
+        services.AddScoped<IMapper, ServiceMapper>();
+
         services.AddTransient<IDataGenerator, DataGenerator>();
         services.AddTransient<IDocumentService, DocumentService>();
         services.AddTransient<IMessageService<Guid>, MessageService>();
+        services.AddTransient<IScopeAccessService, ScopeAccessService>();
 
         // Configure IMongoDatabase
         var dbSettings = configuration.GetSection(nameof(DbSettings)).Get<DbSettings>();
@@ -36,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IRepository<Guid, MessageData>, MongoBaseRepository<MessageData>>();
         services.AddTransient<IRepository<Guid, ChatData>, MongoBaseRepository<ChatData>>();
         services.AddTransient<IRepository<Guid, KnowledgeGroupData>, MongoBaseRepository<KnowledgeGroupData>>();
+        services.AddTransient<IScopeUserRepository, ScopeUserRepository>();
 
         services.ConfigureFileAccessLocalDependencies(environment);
     }
