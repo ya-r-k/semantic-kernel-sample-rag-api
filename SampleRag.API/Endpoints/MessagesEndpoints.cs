@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using SampleRag.Application.Interfaces.Services;
+using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
-using System.Runtime.CompilerServices;
+using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.API.Endpoints;
 
@@ -12,13 +12,13 @@ public static class MessagesEndpoints
         var group = routes.MapGroup("api/messages").WithTags("Messages");
         group.MapPost("/", SendUserMessage)
             .RequireAuthorization()
-            .Produces<MessageData>(StatusCodes.Status200OK)
-            .Accepts<MessageData>("application/json");
+            .Produces<MessagePart>(StatusCodes.Status200OK)
+            .Accepts<SendMessageRequest>("application/json");
     }
 
     public static async IAsyncEnumerable<MessagePart> SendUserMessage(
-        [FromBody] MessageData message,
-        IMessageService<Guid> messagesService)
+        [FromBody] SendMessageRequest message,
+        IMessagesService messagesService)
     {
         await foreach (var part in messagesService.GenerateAiResponce(message))
         {

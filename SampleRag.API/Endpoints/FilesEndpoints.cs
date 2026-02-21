@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using SampleRag.Application.Interfaces;
+using SampleRag.Domain.Interfaces;
 
 namespace SampleRag.API.Endpoints;
 
@@ -11,9 +11,13 @@ public static class FilesEndpoints
         var group = routes.MapGroup("api/files").WithTags("Files");
         group.MapGet("assets/documents/{fileName}", async ([FromRoute] string fileName, IFileRepository repository, CancellationToken ct) =>
         {
-            await using var stream = await repository.GetAsync("assets/documents", fileName);
-
-            return Results.File(stream, fileDownloadName: fileName, enableRangeProcessing: true);
+            var stream = await repository.GetAsync("assets/documents", fileName);
+            if (stream is null)
+            {
+                return Results.NotFound();
+            }
+            
+            return Results.File(stream, enableRangeProcessing: true, contentType: "application/pdf");
         })
             //.RequireAuthorization()
             .Produces<FileStreamResult>(StatusCodes.Status200OK)

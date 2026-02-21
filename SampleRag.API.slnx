@@ -15,4 +15,11 @@
   <Folder Name="/Solution items/.specify/">
     <File Path=".specify/memory/constitution.md" />
   </Folder>
+  <Folder Name="/Solution items/Scripts/">
+    <File Path="Scripts/backup-mongo-neo4j.bat" />
+    <File Path="Scripts/docker.run-api.bat" />
+    <File Path="Scripts/docker.run-deps.bat" />
+    <File Path="Scripts/docker.run-deps.sh" />
+    <File Path="Scripts/restore-mongo-neo4j.bat" />
+  </Folder>
 </Solution>

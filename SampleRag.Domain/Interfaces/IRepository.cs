@@ -1,7 +1,7 @@
 ﻿using SampleRag.Domain.Models.Abstractions;
 using System.Linq.Expressions;
 
-namespace SampleRag.Application.Interfaces;
+namespace SampleRag.Domain.Interfaces;
 
 public interface IRepository<TId, TModel>
     where TId : unmanaged

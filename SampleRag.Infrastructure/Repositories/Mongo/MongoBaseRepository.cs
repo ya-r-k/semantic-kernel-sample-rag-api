@@ -1,5 +1,5 @@
 ﻿using MongoDB.Driver;
-using SampleRag.Application.Interfaces;
+using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Models.Abstractions;
 using System.Linq.Expressions;
 
@@ -8,7 +8,10 @@ namespace SampleRag.Infrastructure.Repositories.Mongo;
 public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<Guid, TModel>
     where TModel : IEntity<Guid>
 {
-    protected readonly IMongoCollection<TModel> _collection = database.GetCollection<TModel>(typeof(TModel).Name);
+    protected readonly IMongoCollection<TModel> _collection = database.GetCollection<TModel>(typeof(TModel).Name, new MongoCollectionSettings 
+    {
+        AssignIdOnInsert = true,
+    });
 
     public async Task<IEnumerable<TModel>> AddAsync(TModel[] items)
     {
@@ -20,7 +23,6 @@ public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<
         }
         catch (MongoBulkWriteException<TModel> ex)
         {
-            // Фильтруем только успешно вставленные записи
             addedItems = [.. addedItems.Except(ex.WriteErrors.Select(err => items[err.Index]))];
         }
 

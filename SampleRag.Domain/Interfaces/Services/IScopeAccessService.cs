@@ -1,4 +1,4 @@
-namespace SampleRag.Application.Interfaces.Services;
+namespace SampleRag.Domain.Interfaces.Services;
 
 /// <summary>
 /// Validates scope access for the current user. Used on upload, chat create, and messages.

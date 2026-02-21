@@ -1,20 +1,31 @@
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.Qdrant;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
-using SampleRag.Application.Interfaces;
-using SampleRag.Application.Interfaces.Services;
+using Qdrant.Client;
+using Qdrant.Client.Grpc;
+using SampleRag.Application.DataGenerators;
+using SampleRag.Application.Factories;
+using SampleRag.Application.KernelFunctions.Plugins;
 using SampleRag.Application.Services;
+using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces.Factories;
+using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
 using SampleRag.Domain.Models.Configs;
+using SampleRag.Infrastructure.EmbeddingGenerators;
 using SampleRag.Infrastructure.Repositories.Files;
 using SampleRag.Infrastructure.Repositories.Mongo;
-using SampleRag.Infrastructure.VectorStore;
+using SampleRag.Infrastructure.Repositories.Vector;
+using ApiDocument = SampleRag.Domain.Models.Document;
 
 namespace SampleRag.Di;
 
@@ -26,10 +37,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(config);
         services.AddScoped<IMapper, ServiceMapper>();
 
-        services.AddTransient<IDataGenerator, DataGenerator>();
-        services.AddTransient<IChunkingService, ChunkingService>();
+        services.AddTransient<IDataGenerator, SemanticKernelDataGenerator>();
+
+        services.AddTransient<IDocumentChunkService, DocumentChunkService>();
         services.AddTransient<IDocumentService, DocumentService>();
-        services.AddTransient<IMessageService<Guid>, MessageService>();
+        services.AddTransient<IMessagesService, MessagesService>();
+        services.AddTransient<IChatService, ChatService>();
         services.AddTransient<IScopeAccessService, ScopeAccessService>();
 
         // Configure IMongoDatabase
@@ -41,19 +54,14 @@ public static class ServiceCollectionExtensions
             services.AddSingleton(new MongoClient(dbSettings.ConnectionString).GetDatabase(dbSettings.DatabaseName));
         }
 
-        services.AddTransient<IRepository<Guid, DocumentData>, MongoBaseRepository<DocumentData>>();
-        services.AddTransient<IRepository<Guid, MessageData>, MongoBaseRepository<MessageData>>();
-        services.AddTransient<IRepository<Guid, ChatData>, MongoBaseRepository<ChatData>>();
-        services.AddTransient<IRepository<Guid, KnowledgeGroupData>, MongoBaseRepository<KnowledgeGroupData>>();
-        services.AddTransient<IScopeUserRepository, ScopeUserRepository>();
+        services.AddTransient<IRepository<Guid, ApiDocument>, MongoBaseRepository<ApiDocument>>();
+        services.AddTransient<IRepository<Guid, DocumentChunk>, MongoBaseRepository<DocumentChunk>>();
+        services.AddTransient<IRepository<Guid, Message>, MongoBaseRepository<Message>>();
+        services.AddTransient<IRepository<Guid, Chat>, MongoBaseRepository<Chat>>();
+        services.AddTransient<IRepository<Guid, KnowledgeScope>, MongoBaseRepository<KnowledgeScope>>();
+        services.AddTransient<IKnowledgeGroupUserRepository, KnowledgeScopeUserRepository>();
 
-        services.AddHttpClient("Qdrant", (sp, client) =>
-        {
-            var cfg = configuration.GetSection(nameof(VectorDbSettings)).Get<VectorDbSettings>();
-            var url = cfg?.Url?.TrimEnd('/').Replace(":6334", ":6333") ?? "http://localhost:6333";
-            client.BaseAddress = new Uri(url);
-        });
-        services.AddTransient<IDocumentChunkStore, DocumentChunkStore>();
+        services.AddTransient<IVectorRepository<DocumentChunk>, QdrantDocumentChunkRepository>();
 
         services.ConfigureFileAccessLocalDependencies(environment);
     }
@@ -66,5 +74,137 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddTransient<IFileRepository, LocalFileRepository>();
+    }
+
+    public static void ConfigureAiDependencies(this IServiceCollection services, IConfiguration configuration)
+    {
+        var vectorDbSettings = configuration.GetSection(nameof(VectorDbSettings)).Get<VectorDbSettings>();
+        var lmConfig = configuration.GetSection(nameof(GenAiProviderSettings)).Get<GenAiProviderSettings>();
+
+        services.ConfigureKernel(lmConfig ?? new());
+        services.ConfigureQdrant(vectorDbSettings ?? new());
+    }
+
+    public static void ConfigureKernel(this IServiceCollection services, GenAiProviderSettings lmConfig)
+    {
+        services.AddSingleton(lmConfig);
+
+        var kernelBuilder = services.AddKernel()
+            .AddOllamaChatCompletion(lmConfig!.TextModel, new Uri(lmConfig.Url))
+            .AddOllamaTextGeneration(lmConfig!.TextModel, new Uri(lmConfig.Url))
+            .AddOllamaEmbeddingGenerator(lmConfig.TextEmbeddingModel, new Uri(lmConfig.Url));
+
+        kernelBuilder.Plugins
+            .AddFromType<TimePlugin>()
+            .AddFromType<RetrievalPlugin>();
+
+        services.ConfigurePromptExecutionSettings();
+
+        // Configures Semantic Memory
+        //services.AddKernelMemory<MemoryServerless>();
+
+        services.AddSingleton<IEmbeddingGenerator<DocumentChunk, Embedding<float>>, DocumentChunkEmbeddingGenerator>();
+    }
+
+    public static void ConfigureQdrant(this IServiceCollection services, VectorDbSettings vectorDbSettings)
+    {
+        services.AddSingleton(vectorDbSettings);
+
+        var qdrantClient = new QdrantClient(new Uri(vectorDbSettings!.Url));
+
+        services.AddQdrantVectorStore(_ => qdrantClient,
+            sp => new QdrantVectorStoreOptions
+            {
+                EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>(),
+                HasNamedVectors = false,
+            })
+            .AddQdrantCollection<Guid, DocumentChunk>("document-chunks")
+            .AddQdrantCollection<Guid, ApiDocument>("documents")
+            .AddQdrantCollection<Guid, KnowledgeScope>("knowledge-groups");
+
+        _ = Task.Run(() => EnsureCollectionsExistsAsync(qdrantClient, vectorDbSettings));
+    }
+
+    public static async Task EnsureCollectionsExistsAsync(this QdrantClient qdrantClient, VectorDbSettings vectorDbSettings)
+    {
+        var collections = await qdrantClient.ListCollectionsAsync();
+
+        foreach (var collectionConfig in vectorDbSettings.Collections)
+        {
+            if (collections.Any(x => string.Equals(x, collectionConfig.CollectionName, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            var quantizationConfig = GetQuantizationConfig(collectionConfig.Quantization);
+
+            await qdrantClient.RecreateCollectionAsync(collectionConfig.CollectionName, new VectorParams
+            {
+                Size = collectionConfig.VectorSize,
+                Distance = collectionConfig.Distance.Adapt<Distance>(),
+                QuantizationConfig = quantizationConfig,
+            });
+        }
+    }
+
+    private static void ConfigurePromptExecutionSettings(this IServiceCollection services)
+    {
+        var executionSettingsBase = new Dictionary<string, PromptExecutionSettings>()
+        {
+            ["with-auto-choosing-functions"] = new PromptExecutionSettings
+            {
+                FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
+            },
+        };
+
+        services.AddSingleton<ISettingsFactory<PromptExecutionSettings>>(sp =>
+        {
+            var kernel = sp.GetRequiredService<Kernel>();
+            var retrievalPlugin = kernel.Plugins.GetFunction(nameof(RetrievalPlugin), "GetRelevantChunks");
+
+            var executionSettings = new Dictionary<string, PromptExecutionSettings>(executionSettingsBase)
+            {
+                ["naive-rag"] = new PromptExecutionSettings
+                {
+                    FunctionChoiceBehavior = FunctionChoiceBehavior.Required([retrievalPlugin]),
+                }
+            };
+
+            return new PromptExecutionSettingsFactory(executionSettings);
+        });
+    }
+
+    private static QuantizationConfig GetQuantizationConfig(string quantization)
+    {
+        return quantization switch
+        {
+            "Binary" => new QuantizationConfig()
+            {
+                Binary = new BinaryQuantization()
+                {
+                    QueryEncoding = new BinaryQuantizationQueryEncoding()
+                    {
+                        Setting = BinaryQuantizationQueryEncoding.Types.Setting.Scalar8Bits,
+                    },
+                    Encoding = BinaryQuantizationEncoding.TwoBits,
+                },
+            },
+            "Scalar" => new QuantizationConfig()
+            {
+                Scalar = new ScalarQuantization()
+                {
+                    Quantile = 0.98f,
+                    Type = QuantizationType.Int8,
+                },
+            },
+            "Product" => new QuantizationConfig()
+            {
+                Product = new ProductQuantization()
+                {
+                    Compression = CompressionRatio.X4,
+                }
+            },
+            _ => throw new NotImplementedException(),
+        };
     }
 }
