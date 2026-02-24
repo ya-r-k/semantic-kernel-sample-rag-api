@@ -1,7 +1,7 @@
-﻿using MongoDB.Driver;
+﻿using System.Linq.Expressions;
+using MongoDB.Driver;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Models.Abstractions;
-using System.Linq.Expressions;
 
 namespace SampleRag.Infrastructure.Repositories.Mongo;
 

@@ -7,10 +7,13 @@
     <Project Path="SampleRag.Infrastructure/SampleRag.Infrastructure.csproj" Id="4aa40977-510c-4d6e-b7e7-9e133682bd2f" />
   </Folder>
   <Folder Name="/Solution items/">
+    <File Path=".editorconfig" />
     <File Path=".gitignore" />
     <File Path=".cursorignore" />
+    <File Path="Directory.Build.props" />
     <File Path="project.md" />
     <File Path="README.md" />
+    <File Path="stylecop.json" />
   </Folder>
   <Folder Name="/Solution items/.specify/">
     <File Path=".specify/memory/constitution.md" />

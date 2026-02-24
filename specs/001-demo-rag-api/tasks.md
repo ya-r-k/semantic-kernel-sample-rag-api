@@ -25,7 +25,7 @@ description: 'Task list for Demo RAG API feature implementation'
 - **Infrastructure**: `SampleRag.Infrastructure/Repositories/`, configuration
 - **DI**: `SampleRag.Di/`
 
-**Terminology**: In this feature, _scope_ and _group_ refer to the same concept (container for documents and chats). The API exposes it as `/api/groups`; the data model uses Scope (alias KnowledgeGroup).
+**Terminology**: In this feature, _scope_ and _group_ refer to the same concept (container for documents and chats). The API exposes it as `/api/knowledgescopes`; the data model uses Scope (alias KnowledgeGroup).
 
 ---
 
@@ -52,7 +52,7 @@ description: 'Task list for Demo RAG API feature implementation'
 - [x] T008 Fix GET list endpoints to return Results.Ok: ChatsEndpoints.cs and KnowledgeGroupsEndpoints.cs (per plan bug fixes)
 - [x] T009 Fix MessageData.ChatId type to Guid and align with ChatData.Id in SampleRag.Domain/Models/MessageData.cs
 - [x] T010 Configure Qdrant client and collection schema (payload: DocumentId, ScopeId, PageNumber, ChunkIndex, Text) in SampleRag.Infrastructure
-- [x] T011 [P] Implement Scope API: POST /api/groups, GET /api/groups, POST /api/groups/{id}/users, DELETE /api/groups/{id}/users/{userId} in SampleRag.API/Endpoints/KnowledgeGroupsEndpoints.cs (or dedicated ScopesEndpoints) with admin/scope-access auth
+- [x] T011 [P] Implement Scope API: POST /api/knowledgescopes, GET /api/knowledgescopes, POST /api/knowledgescopes/{id}/users, DELETE /api/knowledgescopes/{id}/users/{userId} in SampleRag.API/Endpoints/KnowledgeGroupsEndpoints.cs (or dedicated ScopesEndpoints) with admin/scope-access auth
 
 **Checkpoint**: Foundation ready — user story implementation can begin
 

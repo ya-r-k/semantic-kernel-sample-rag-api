@@ -1,6 +1,6 @@
-﻿using SampleRag.Domain.Interfaces.Services;
+﻿using System.Security.Claims;
+using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models.Abstractions;
-using System.Security.Claims;
 
 namespace SampleRag.API.Filters;
 

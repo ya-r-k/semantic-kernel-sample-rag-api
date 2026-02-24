@@ -1,5 +1,5 @@
-﻿using SampleRag.Domain.Models;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
+using SampleRag.Domain.Models;
 
 namespace SampleRag.Domain.Interfaces.Services;
 

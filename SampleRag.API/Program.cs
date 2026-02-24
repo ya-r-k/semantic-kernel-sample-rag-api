@@ -1,3 +1,4 @@
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -7,11 +8,10 @@ using SampleRag.API.Endpoints;
 using SampleRag.API.Middleware;
 using SampleRag.Di;
 using SampleRag.Domain.Models.Configs;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
-//builder.AddServiceDefaults();
+// builder.AddServiceDefaults();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
@@ -99,13 +99,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
 app.MapChatsEndpoints();
 app.MapMessagesEndpoints();
 app.MapDocumentsEndpoints();
 app.MapFilesEndpoints();
 app.MapKnowledgeScopesEndpoints();
 
-//app.AddKernelMemoryEndpoints(apiPrefix: "/rag");
-
+// app.AddKernelMemoryEndpoints(apiPrefix: "/rag");
 app.Run();

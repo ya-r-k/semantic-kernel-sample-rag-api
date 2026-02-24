@@ -1,8 +1,8 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Models;
-using System.Linq.Expressions;
 
 namespace SampleRag.API.Endpoints;
 

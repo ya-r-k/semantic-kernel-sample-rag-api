@@ -1,5 +1,5 @@
-﻿using Microsoft.SemanticKernel;
-using System.ComponentModel;
+﻿using System.ComponentModel;
+using Microsoft.SemanticKernel;
 
 namespace SampleRag.Application.KernelFunctions.Plugins;
 

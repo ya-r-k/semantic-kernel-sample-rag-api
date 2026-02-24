@@ -1,5 +1,5 @@
-﻿using SampleRag.Domain.Models.Enums;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+using SampleRag.Domain.Models.Enums;
 
 namespace SampleRag.Domain.Models;
 

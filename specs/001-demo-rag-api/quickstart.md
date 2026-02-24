@@ -39,7 +39,7 @@ Swagger: https://localhost:7xxx/swagger (or port from launchSettings).
 ### 1. Create a scope (admin)
 
 ```http
-POST /api/groups
+POST /api/knowledgescopes
 Authorization: Bearer <admin-token>
 Content-Type: application/json
 
@@ -47,7 +47,7 @@ Content-Type: application/json
 ```
 
 Expect 201 with `{ "id": "<scopeId>", "name": "Product Docs" }`.  
-(Optional) Add user to scope: `POST /api/groups/<scopeId>/users` with `{ "userId": "..." }`.
+(Optional) Add user to scope: `POST /api/knowledgescopes/<scopeId>/users` with `{ "userId": "..." }`.
 
 ### 2. Upload a PDF (admin, with scope access)
 

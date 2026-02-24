@@ -1,6 +1,6 @@
-﻿using SampleRag.Domain.Models;
+﻿using System.Linq.Expressions;
+using SampleRag.Domain.Models;
 using SampleRag.Domain.RequestModels;
-using System.Linq.Expressions;
 
 namespace SampleRag.Domain.Interfaces.Services;
 

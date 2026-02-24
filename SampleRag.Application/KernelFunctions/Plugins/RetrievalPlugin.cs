@@ -1,7 +1,7 @@
-﻿using Microsoft.SemanticKernel;
+﻿using System.ComponentModel;
+using Microsoft.SemanticKernel;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Models;
-using System.ComponentModel;
 
 namespace SampleRag.Application.KernelFunctions.Plugins;
 

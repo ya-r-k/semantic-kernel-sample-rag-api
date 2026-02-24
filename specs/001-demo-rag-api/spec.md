@@ -5,6 +5,8 @@
 **Status**: Draft  
 **Input**: User description: "Требуется разработать демонстрационный пример RAG API. В данное приложение я могу загружать файлы pdf, а потом общатся с помощью языковых моделей с самой системой а система уже определяет сама каие файлы использовать для ответа, и в ответе предоставляет список источников на котрых ответ сформирован, в том числе со страницами. Файлы могут загружаться только администраторами, обычные пользователи делать это не смогут. Чаты должны иметь возможность чтобы ими владели несколько пользователей. еще должна быть возможность отправки сообщения и чтобы самостоятельно создавался чат и название для него генерировалось на основе запроса к системе. должна быть реализована система обратной связи макисмально простая т.е. на ответах от системы пользователь может ставить лайки или дизлайки если ответ правильный или неправильный. и учитывать что это все на строне API т.е. это для API нужно сделать"
 
+**Governance**: This specification is aligned with the project constitution (`.specify/memory/constitution.md`) and the current architecture and code quality standards documented in the project overview (`project.md`). Implementation of this feature SHALL comply with that governance; the functional requirements and their numbering below are unchanged.
+
 ## Clarifications
 
 ### Session 2025-02-14
@@ -106,6 +108,15 @@ A user can indicate whether a system answer was helpful by submitting a like (co
 - **FR-008**: System MUST allow users to submit simple feedback (like or dislike) for a specific system answer and MUST persist that feedback.
 - **FR-009**: System MUST expose all behaviour above via API only (no direct file or database access for these operations).
 
+## Project Governance
+
+Implementation of this feature SHALL comply with:
+
+- **Project constitution** (`.specify/memory/constitution.md`): Core principles and constraints (e.g. single language and stack, Minimal API, single vector store, file storage and size limits, Clean Architecture, Repository pattern, attribute-free domain models, code style, primary constructors in application/infrastructure layers, endpoint validation via filters). Any exception MUST be documented and justified.
+- **Project overview** (`project.md`): Current architecture, technology stack, API design, data layer, and code quality (including `.editorconfig` and StyleCop). New or changed behaviour SHALL align with the documented structure and standards.
+
+Functional requirements (FR-001 through FR-009) and their numbering are binding and unchanged; governance applies to how they are realized.
+
 ### Key Entities
 
 - **Scope (group/tenant/category)**: A container that groups documents and defines which users can use it for Q&A, uploads, and chat creation; scopes are created or managed via the explicit scope API (e.g. by admins); the system enforces scope access for creating chats, asking questions, and uploading files.
@@ -121,6 +132,9 @@ A user can indicate whether a system answer was helpful by submitting a like (co
 - “Administrator” and “user” are roles or attributes supplied in or derived from that token when processing requests.
 - Generated chat titles are derived from the first user message (e.g. summarised or truncated) and need only be human-readable, not unique.
 - Documents are scoped (group/tenant/category). Scopes are created and managed via the API; the system enforces which users can use which scope. Each chat is bound to one scope at creation; the system uses only documents in that chat’s scope when producing answers for questions in that chat.
+
+- File upload size limit and file access follow project constraints: maximum single file size as defined by project governance (20 MB); file access is only through the API (no direct public access to stored files).
+- Implementation structure, validation approach, and persistence patterns follow the project's Clean Architecture and governance (constitution and project overview); all behaviour above is exposed via the API only.
 
 ## Success Criteria *(mandatory)*
 

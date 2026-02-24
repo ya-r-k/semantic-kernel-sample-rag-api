@@ -1,10 +1,10 @@
-﻿using Microsoft.SemanticKernel;
+﻿using System.Runtime.CompilerServices;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.TextGeneration;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Factories;
 using SampleRag.Domain.Models;
-using System.Runtime.CompilerServices;
 
 namespace SampleRag.Application.DataGenerators;
 
