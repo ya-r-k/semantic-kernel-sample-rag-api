@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
@@ -9,6 +9,11 @@ public class ChatService(
     IDataGenerator dataGenerator,
     IRepository<Guid, Chat> chatRepository) : IChatService
 {
+    public async Task<IEnumerable<Chat>> AddAsync(params Chat[] items)
+    {
+        return await chatRepository.AddAsync(items);
+    }
+
     public async Task<IEnumerable<Chat>> GetBatchByAsync(Expression<Func<Chat, bool>> expression, int batchSize)
     {
         return await chatRepository.GetBatchByAsync(expression, batchSize);

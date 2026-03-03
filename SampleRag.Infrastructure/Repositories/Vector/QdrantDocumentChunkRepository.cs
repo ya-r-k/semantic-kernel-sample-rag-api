@@ -65,6 +65,28 @@ public class QdrantDocumentChunkRepository(
         return [.. result.Select(x => x.Record)];
     }
 
+    public async Task<IEnumerable<DocumentChunk>> RetrieveChunksAsync(Guid scopeId, string query, int topK = 5, CancellationToken ct = default)
+    {
+        var queryEmbedding = await embeddingGenerator.GenerateAsync(
+        [
+            new DocumentChunk
+            {
+                Text = query,
+            }
+        ], cancellationToken: ct);
+
+        var result = await vectorCollection.SearchAsync(new DocumentChunk
+        {
+            Text = query,
+            Vector = queryEmbedding[0].Vector,
+        }, topK * 3, cancellationToken: ct).ToListAsync(cancellationToken: ct);
+
+        return [.. result
+            .Select(x => x.Record)
+            .Where(c => c.ScopeId == scopeId)
+            .Take(topK)];
+    }
+
     public async Task RemoveByAsync(Guid documentId, CancellationToken ct = default)
     {
         using var qdrantClient = new QdrantClient(settings.Url);

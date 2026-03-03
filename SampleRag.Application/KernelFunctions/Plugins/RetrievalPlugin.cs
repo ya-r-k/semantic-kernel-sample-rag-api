@@ -7,12 +7,30 @@ namespace SampleRag.Application.KernelFunctions.Plugins;
 
 public class RetrievalPlugin(IVectorRepository<DocumentChunk> chunkRepository)
 {
-    [KernelFunction("GetRelevantChunks")]
-    [Description("Ищет релевантные чанки документов по запросу пользователя для RAG")]
-    public async Task<IEnumerable<DocumentChunk>> GetRelevantChunksAsync(
-        [Description("Запрос пользователя")] string query,
-        [Description("Количество чанков")] int topK = 5)
+    [KernelFunction("RetrieveRelevantChunks")]
+    [Description("Retrieves internal knowledge from document chunks for complex user queries")]
+    public Task<IEnumerable<DocumentChunk>> RetrieveRelevantChunksAsync(
+        [Description("ai-decomposed aspect of complex user request - NOT raw user input")] string subQuery)
     {
-        return await chunkRepository.RetrieveChunksAsync(query, topK);
+        //return await chunkRepository.RetrieveChunksAsync(query, topK);
+
+        return Task.FromResult(new DocumentChunk[]
+        {
+            new ()
+            {
+                Id = Guid.NewGuid(),
+                DocumentId = Guid.NewGuid(),
+            },
+            new () 
+            {
+                Id = Guid.NewGuid(),
+                DocumentId = Guid.NewGuid(),
+            },
+            new ()
+            {
+                Id = Guid.NewGuid(),
+                DocumentId = Guid.NewGuid(),
+            },
+        }.AsEnumerable());
     }
 }

@@ -5,7 +5,7 @@ using SampleRag.Domain.Models.Abstractions;
 namespace SampleRag.API.Filters;
 
 public class ScopeUserAccessFilter(
-    IScopeAccessService scopeAccessService,
+    IKnowledgeScopeUserService scopeAccessService,
     ClaimsPrincipal user) : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
@@ -22,7 +22,7 @@ public class ScopeUserAccessFilter(
             return Results.Unauthorized();
         }
         
-        if (!await scopeAccessService.CanUseScopeAsync(data.ScopeId, userId))
+        if (!await scopeAccessService.HasAccessAsync(data.ScopeId, userId))
         {
             return Results.Json(new { error = "No access to scope" }, statusCode: StatusCodes.Status403Forbidden);
         }

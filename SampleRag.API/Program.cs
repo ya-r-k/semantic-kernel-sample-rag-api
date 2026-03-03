@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Mapster;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -7,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using SampleRag.API.Endpoints;
 using SampleRag.API.Middleware;
 using SampleRag.Di;
+using SampleRag.Di.Mapping;
 using SampleRag.Domain.Models.Configs;
 
 var builder = WebApplication.CreateSlimBuilder(args);
@@ -78,6 +80,10 @@ else
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
 });*/
 
+TypeAdapterConfig.GlobalSettings.Scan(AppDomain.CurrentDomain.GetAssemblies());
+TypeAdapterConfig.GlobalSettings.Compile();
+
+builder.Services.ConfigureMapster();
 builder.Services.ConfigureAiDependencies(builder.Configuration);
 builder.Services.ConfigureDependencies(builder.Configuration, builder.Environment);
 

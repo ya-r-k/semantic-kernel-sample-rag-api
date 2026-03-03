@@ -1,10 +1,12 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using SampleRag.Domain.Models;
 
 namespace SampleRag.Domain.Interfaces.Services;
 
 public interface IChatService
 {
+    Task<IEnumerable<Chat>> AddAsync(params Chat[] items);
+
     IAsyncEnumerable<MessagePart> StartNewChat(Message message);
 
     Task UpdateAsync(params Chat[] items);

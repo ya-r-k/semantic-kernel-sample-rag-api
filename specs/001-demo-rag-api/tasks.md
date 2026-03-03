@@ -80,11 +80,11 @@ description: 'Task list for Demo RAG API feature implementation'
 
 **Independent Test**: User sends a question via POST /api/messages with chatId + text; response contains answer and sources array with documentId and pageNumber.
 
-- [ ] T017 [P] [US2] Add ScopeId and OwnerIds to ChatData; add SourceReferences (document + page) to MessageData in SampleRag.Domain/Models/ChatData.cs and MessageData.cs
-- [ ] T018 [US2] Implement RAG retrieval: filter by ScopeId in Qdrant, return chunks with DocumentId and PageNumber in SampleRag.Application/Services
-- [ ] T019 [US2] Implement RAG answer flow: retrieve chunks, build prompt with context, call LLM via Semantic Kernel, attach source list to system message in SampleRag.Application/Services
-- [ ] T020 [US2] Implement POST /api/messages with chatId + text: validate caller is owner, run RAG, return answer and sources in SampleRag.API/Endpoints/MessagesEndpoints.cs
-- [ ] T021 [US2] Implement POST /api/chats (title, scopeId, owner from token) with scope access check in SampleRag.API/Endpoints/ChatsEndpoints.cs
+- [X] T017 [P] [US2] Add ScopeId and OwnerIds to Chat; add SourceReferences (document + page) to Message in SampleRag.Domain/Models/Chat.cs and Message.cs
+- [X] T018 [US2] Implement RAG retrieval: filter by ScopeId in Qdrant, return chunks with DocumentId and PageNumber in SampleRag.Application/Services
+- [X] T019 [US2] Implement RAG answer flow: retrieve chunks, build prompt with context, call LLM via Semantic Kernel, attach source list to system message in SampleRag.Application/Services
+- [X] T020 [US2] Implement POST /api/messages with chatId + text: validate caller is owner, run RAG, return answer and sources in SampleRag.API/Endpoints/MessagesEndpoints.cs
+- [X] T021 [US2] Implement POST /api/chats (title, scopeId, owner from token) with scope access check in SampleRag.API/Endpoints/ChatsEndpoints.cs
 
 **Checkpoint**: User Stories 1 and 2 complete — RAG answers with sources work in scope-bound chats
 

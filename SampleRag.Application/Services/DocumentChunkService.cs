@@ -58,6 +58,8 @@ public class DocumentChunkService(
             var pageChunks = SplitPageText(text, page);
             foreach (var chunk in pageChunks)
             {
+                chunk.DocumentId = data.Id;
+                chunk.ScopeId = data.ScopeId;
                 chunk.ChunkIndex = lastChunkIndex++;
                 chunks.Add(chunk);
             }
@@ -69,7 +71,6 @@ public class DocumentChunkService(
     public async Task<IEnumerable<DocumentChunk>> GetBatchByAsync(Expression<Func<DocumentChunk, bool>> predicate, int batchSize)
     {
         return await dbRepository.GetBatchByAsync(predicate, batchSize);
-        throw new NotImplementedException();
     }
 
     private static List<DocumentChunk> SplitPageText(string text, int pageNumber)

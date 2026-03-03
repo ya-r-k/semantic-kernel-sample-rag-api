@@ -5,6 +5,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -12,19 +13,21 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
-using SampleRag.Application.DataGenerators;
 using SampleRag.Application.Factories;
 using SampleRag.Application.KernelFunctions.Plugins;
 using SampleRag.Application.Services;
+using SampleRag.Di.Mapping;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Factories;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
 using SampleRag.Domain.Models.Configs;
+using SampleRag.Infrastructure.DataGenerators;
 using SampleRag.Infrastructure.EmbeddingGenerators;
 using SampleRag.Infrastructure.Repositories.Files;
 using SampleRag.Infrastructure.Repositories.Mongo;
 using SampleRag.Infrastructure.Repositories.Vector;
+using System.Reflection;
 using ApiDocument = SampleRag.Domain.Models.Document;
 
 namespace SampleRag.Di;
@@ -43,7 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IDocumentService, DocumentService>();
         services.AddTransient<IMessagesService, MessagesService>();
         services.AddTransient<IChatService, ChatService>();
-        services.AddTransient<IScopeAccessService, ScopeAccessService>();
+        services.AddTransient<IKnowledgeScopeUserService, KnowledgeScopeUserService>();
 
         // Configure IMongoDatabase
         var dbSettings = configuration.GetSection(nameof(DbSettings)).Get<DbSettings>();
@@ -58,8 +61,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IRepository<Guid, DocumentChunk>, MongoBaseRepository<DocumentChunk>>();
         services.AddTransient<IRepository<Guid, Message>, MongoBaseRepository<Message>>();
         services.AddTransient<IRepository<Guid, Chat>, MongoBaseRepository<Chat>>();
-        services.AddTransient<IRepository<Guid, KnowledgeScope>, MongoBaseRepository<KnowledgeScope>>();
-        services.AddTransient<IKnowledgeGroupUserRepository, KnowledgeScopeUserRepository>();
+        services.AddTransient<IKnowledgeScopeRepository, KnowledgeScopeRepository>();
+        services.AddTransient<IKnowledgeScopeUserRepository, KnowledgeScopeUserRepository>();
 
         services.AddTransient<IVectorRepository<DocumentChunk>, QdrantDocumentChunkRepository>();
 
@@ -160,7 +163,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISettingsFactory<PromptExecutionSettings>>(sp =>
         {
             var kernel = sp.GetRequiredService<Kernel>();
-            var retrievalPlugin = kernel.Plugins.GetFunction(nameof(RetrievalPlugin), "GetRelevantChunks");
+            var retrievalPlugin = kernel.Plugins.GetFunction(nameof(RetrievalPlugin), "RetrieveRelevantChunks");
 
             var executionSettings = new Dictionary<string, PromptExecutionSettings>(executionSettingsBase)
             {

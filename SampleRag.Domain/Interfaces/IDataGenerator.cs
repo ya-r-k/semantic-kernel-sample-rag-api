@@ -10,5 +10,5 @@ public interface IDataGenerator
 
     IAsyncEnumerable<string> GenerateStreamingData(IEnumerable<Message> messages, CancellationToken ct = default);
 
-    IAsyncEnumerable<string> GenerateStreamingData(IEnumerable<Message> messages, string executionSettingsName, CancellationToken ct = default);
+    IAsyncEnumerable<MessagePart> GenerateStreamingData(IEnumerable<Message> messages, string executionSettingsName, CancellationToken ct = default);
 }

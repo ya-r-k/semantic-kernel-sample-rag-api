@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
@@ -13,16 +14,23 @@ public static class MessagesEndpoints
         group.MapPost("/", SendUserMessage)
             .RequireAuthorization()
             .Produces<MessagePart>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status403Forbidden)
             .Accepts<SendMessageRequest>("application/json");
     }
 
     public static async IAsyncEnumerable<MessagePart> SendUserMessage(
         [FromBody] SendMessageRequest message,
-        IMessagesService messagesService)
+        IMessagesService messagesService,
+        ClaimsPrincipal user)
     {
-        await foreach (var part in messagesService.GenerateAiResponce(message))
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+
+        if (userId is not null)
         {
-            yield return part;
+            await foreach (var part in messagesService.GenerateAiResponce(message, userId))
+            {
+                yield return part;
+            }
         }
     }
 }

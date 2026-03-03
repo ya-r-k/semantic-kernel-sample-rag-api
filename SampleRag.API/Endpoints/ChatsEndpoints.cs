@@ -1,8 +1,12 @@
 using System.Linq.Expressions;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SampleRag.API.Filters;
 using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
+using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.API.Endpoints;
 
@@ -11,15 +15,30 @@ public static class ChatsEndpoints
     public static void MapChatsEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("api/chats").WithTags("Chats");
-        group.MapPost("/", async ([FromBody] Chat chat, IRepository<Guid, Chat> chatsRepository, CancellationToken ct) =>
+        group.MapPost("/", async ([FromBody] CreateChatRequest request, IChatService chatService, ClaimsPrincipal user, CancellationToken ct) =>
         {
-            var result = await chatsRepository.AddAsync(chat);
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub") ?? "unknown";
+            var ownerIds = request.OwnerIds?.Length > 0 ? request.OwnerIds : [userId];
 
-            return Results.Created("api/chats", result);
+            var chat = new Chat
+            {
+                Name = request.Title,
+                ScopeId = request.ScopeId,
+                OwnerIds = ownerIds,
+            };
+
+            var result = await chatService.AddAsync(chat);
+            var created = result.FirstOrDefault();
+            return created is not null
+                ? Results.Created($"/api/chats/{created.Id}", created)
+                : Results.StatusCode(StatusCodes.Status500InternalServerError);
         })
             .RequireAuthorization()
+            .AddEndpointFilter<ScopeUserAccessFilter>()
             .Produces<Chat>(StatusCodes.Status201Created)
-            .Accepts<Chat>("application/json");
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Accepts<CreateChatRequest>("application/json");
 
         group.MapGet("/", async ([FromQuery] int batchSize, [FromQuery] Guid? lastUsedIndex, IRepository<Guid, Chat> chatsRepository, CancellationToken ct) =>
         {

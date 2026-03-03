@@ -1,0 +1,103 @@
+﻿using Mapster;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using SampleRag.Application.KernelFunctions.Plugins;
+using SampleRag.Domain.Models;
+using SampleRag.Domain.Models.Enums;
+using OllamaChatResponseStream = OllamaSharp.Models.Chat.ChatResponseStream;
+using OllamaFunction = OllamaSharp.Models.Chat.Message.Function;
+using OllamaToolCall = OllamaSharp.Models.Chat.Message.ToolCall;
+
+namespace SampleRag.Di.Mapping;
+
+public static class MappingServiceCollectionExtensions
+{
+    public static IServiceCollection ConfigureMapster(this IServiceCollection services)
+    {
+        TypeAdapterConfig.GlobalSettings.NewConfig<Message, ChatMessageContent>()
+            .Map(dest => dest.Content, src => src.Text)
+            .Map(dest => dest.Role, src => GetAuthorRole(src))
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<StreamingChatMessageContent, MessagePart>()
+            .Map(dest => dest.Text, src => GetMessagePartText(src))
+            .Map(dest => dest.Step, src => GetMessagePartGenerationStep(src))
+            .Map(dest => dest.ToolCalls, src => GetTools(src))
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<OllamaToolCall, OllamaFunction>()
+            .MapWith(src => src.Function ?? new ())
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<OllamaToolCall, ToolCall>()
+            .MapWith(src => src.Function.Adapt<ToolCall>())
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<OllamaFunction, ToolCall>()
+            .Map(dest => dest.Tool, src => ParseAiTool(src.Name))
+            .Map(dest => dest.Arguments, src => src.Arguments)
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<string?, AiTool>()
+            .MapWith(src => ParseAiTool(src))
+            .Compile();
+
+        return services;
+    }
+
+    private static AuthorRole GetAuthorRole(Message src)
+    {
+        return src.AiGenerated switch
+        {
+            true => AuthorRole.Assistant,
+            false => AuthorRole.User,
+        };
+    }
+
+    private static string GetMessagePartText(StreamingChatMessageContent src)
+    {
+        return src switch
+        {
+            var y when y.InnerContent is OllamaChatResponseStream innerContent &&
+                innerContent?.Message?.Thinking is not null => innerContent.Message.Thinking,
+            var y when y?.Content is not null => y.Content,
+            _ => string.Empty,
+        };
+    }
+
+    private static GenerationStep GetMessagePartGenerationStep(StreamingChatMessageContent src)
+    {
+        return src switch
+        {
+            var y when y.InnerContent is OllamaChatResponseStream innerContent &&
+                innerContent?.Message?.Thinking is not null => GenerationStep.AiThinking,
+            var y when y.InnerContent is OllamaChatResponseStream innerContent &&
+                innerContent?.Message?.ToolCalls is not null => GenerationStep.ToolUsing,
+            var y when y?.Content is not null => GenerationStep.ResponseMessage,
+            _ => GenerationStep.Unknown,
+        };
+    }
+
+    private static IEnumerable<OllamaToolCall>? GetTools(StreamingChatMessageContent src)
+    {
+        if (src.InnerContent is not OllamaChatResponseStream innerContent ||
+            innerContent?.Message?.ToolCalls is null ||
+            !innerContent.Message.ToolCalls.Any())
+        {
+            return default;
+        }
+
+        return innerContent.Message.ToolCalls;
+    }
+
+    private static AiTool ParseAiTool(string? src)
+    {
+        return src switch
+        {
+            $"{nameof(RetrievalPlugin)}_RetrieveRelevantChunks" => AiTool.InternalDocumentData,
+            $"{nameof(TimePlugin)}_GetCurrentTime" => AiTool.CurrentTime,
+            _ => AiTool.Unknown,
+        };
+    }
+}

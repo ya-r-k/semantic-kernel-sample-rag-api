@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
@@ -11,7 +11,7 @@ public class MessagesService(
     IDataGenerator dataGenerator,
     IRepository<Guid, Message> messagesRepository) : IMessagesService
 {
-    public async IAsyncEnumerable<MessagePart> GenerateAiResponce(SendMessageRequest request)
+    public async IAsyncEnumerable<MessagePart> GenerateAiResponce(SendMessageRequest request, string userId)
     {
         var userMessage = new Message
         {
@@ -53,11 +53,12 @@ public class MessagesService(
             Text = string.Empty,
         };
 
-        await foreach (var part in dataGenerator.GenerateStreamingData(messagesHistory.Append(userMessage)))
+        await foreach (var part in dataGenerator.GenerateStreamingData(messagesHistory.Append(userMessage), "naive-rag"))
         {
-            aiMessage.Text += part;
-            yield return new MessagePart { Text = part };
+            aiMessage.Text += part.Text;
+            yield return part;
         }
+
         aiMessage.CreatedAt = DateTime.UtcNow;
 
         await messagesRepository.AddAsync([userMessage, aiMessage]);

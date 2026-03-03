@@ -14,5 +14,8 @@ public class Message : IEntity<Guid>
 
     public DateTime? CreatedAt { get; set; }
 
-    public int[]? DocumentPagesIds { get; set; }
+    /// <summary>
+    /// For AI messages: document + page list cited as sources.
+    /// </summary>
+    public SourceReference[]? SourceReferences { get; set; }
 }
