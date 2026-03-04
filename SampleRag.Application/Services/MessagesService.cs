@@ -1,8 +1,10 @@
-using System.Linq.Expressions;
+using Mapster;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
+using SampleRag.Domain.Models.Enums;
 using SampleRag.Domain.RequestModels;
+using System.Linq.Expressions;
 
 namespace SampleRag.Application.Services;
 
@@ -13,14 +15,10 @@ public class MessagesService(
 {
     public async IAsyncEnumerable<MessagePart> GenerateAiResponce(SendMessageRequest request, string userId)
     {
-        var userMessage = new Message
-        {
-            Text = request.Text,
-            ChatId = request.ChatId ?? Guid.Empty,
-        };
-
+        var userMessage = request.Adapt<Message>();
         var result = new List<IAsyncEnumerable<MessagePart>>();
-        if (!userMessage.ChatId.Equals(Guid.Empty))
+
+        if (userMessage.ChatId.Equals(Guid.Empty))
         {
             result.Add(chatService.StartNewChat(userMessage));
         }
@@ -53,9 +51,21 @@ public class MessagesService(
             Text = string.Empty,
         };
 
+        var prevGenerationStep = GenerationStep.Unknown;
+
         await foreach (var part in dataGenerator.GenerateStreamingData(messagesHistory.Append(userMessage), "naive-rag"))
         {
             aiMessage.Text += part.Text;
+
+            if (part.Step == prevGenerationStep)
+            {
+                part.Step = GenerationStep.Unknown;
+            }
+            else
+            {
+                prevGenerationStep = part.Step;
+            }
+
             yield return part;
         }
 
@@ -63,6 +73,9 @@ public class MessagesService(
 
         await messagesRepository.AddAsync([userMessage, aiMessage]);
 
-        yield return new MessagePart { CreatedAt = aiMessage.CreatedAt };
+        yield return new MessagePart
+        {
+            CreatedAt = aiMessage.CreatedAt,
+        };
     }
 }

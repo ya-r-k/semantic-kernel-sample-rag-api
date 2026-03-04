@@ -23,7 +23,7 @@ public static class MappingServiceCollectionExtensions
         TypeAdapterConfig.GlobalSettings.NewConfig<StreamingChatMessageContent, MessagePart>()
             .Map(dest => dest.Text, src => GetMessagePartText(src))
             .Map(dest => dest.Step, src => GetMessagePartGenerationStep(src))
-            .Map(dest => dest.ToolCalls, src => GetTools(src))
+            .Map(dest => dest.ToolsCalls, src => GetTools(src))
             .Compile();
 
         TypeAdapterConfig.GlobalSettings.NewConfig<OllamaToolCall, OllamaFunction>()
@@ -36,7 +36,11 @@ public static class MappingServiceCollectionExtensions
 
         TypeAdapterConfig.GlobalSettings.NewConfig<OllamaFunction, ToolCall>()
             .Map(dest => dest.Tool, src => ParseAiTool(src.Name))
-            .Map(dest => dest.Arguments, src => src.Arguments)
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<ChatHistory, MessagePart>()
+            .Map(dest => dest.ToolsResults, src => GetToolsResults(src))
+            .Map(dest => dest.Step, src => GenerationStep.ToolResult)
             .Compile();
 
         TypeAdapterConfig.GlobalSettings.NewConfig<string?, AiTool>()
@@ -89,6 +93,34 @@ public static class MappingServiceCollectionExtensions
         }
 
         return innerContent.Message.ToolCalls;
+    }
+
+    private static IEnumerable<ToolResult>? GetToolsResults(ChatHistory src)
+    {
+        return src.Where(x => x.Role == AuthorRole.Tool)
+            .SelectMany(x => x.Items)
+            .Select(x => (x as FunctionResultContent)?.Result)
+            .Where(x => x != null)
+            .GroupBy(GetToolKey)
+            .Select(x => new ToolResult
+            {
+                Tool = x.Key,
+                Value = x.Key switch
+                {
+                    AiTool.InternalDocumentData => [.. x.SelectMany(x => x as IEnumerable<DocumentChunk> ?? [])],
+                    _ => x.Cast<object>().ToArray(),
+                },
+            });
+    }
+
+    private static AiTool GetToolKey(object? src)
+    {
+        return src switch
+        {
+            IEnumerable<DocumentChunk> => AiTool.InternalDocumentData,
+            string => AiTool.CurrentTime,
+            _ => AiTool.Unknown
+        };
     }
 
     private static AiTool ParseAiTool(string? src)

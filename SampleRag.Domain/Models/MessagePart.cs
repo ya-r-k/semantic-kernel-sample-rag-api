@@ -18,14 +18,8 @@ public class MessagePart
     public Guid? NewChatId { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ToolCall[] ToolCalls { get; set; }
+    public ToolCall[] ToolsCalls { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Guid[]? ChunksIds { get; set; }
-
-    /// <summary>
-    /// RAG source references (documentId, pageNumber) for AI answers.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public SourceReference[]? Sources { get; set; }
+    public ToolResult[]? ToolsResults { get; set; }
 }

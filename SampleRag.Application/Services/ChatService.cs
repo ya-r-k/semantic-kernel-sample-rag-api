@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
+using SampleRag.Domain.Models.Enums;
 
 namespace SampleRag.Application.Services;
 
@@ -41,10 +42,14 @@ public class ChatService(
         firstUserMessage.ChatId = newChat.Id;
         yield return new MessagePart
         {
-            NewChatId = newChat.Id
+            Step = GenerationStep.NewChatName,
+            NewChatId = newChat.Id,
+            Text = newChat.Name,
         };
 
-        newChat.Name = string.Empty;
+        /*newChat.Name = string.Empty;
+        var prompt = @"";
+
         await foreach (var part in dataGenerator.GenerateStreamingData(firstUserMessage.Text))
         {
             newChat.Name += part;
@@ -52,7 +57,7 @@ public class ChatService(
             {
                 Text = part
             };
-        }
+        }*/
 
         await chatRepository.UpdateAsync([newChat]);
     }
