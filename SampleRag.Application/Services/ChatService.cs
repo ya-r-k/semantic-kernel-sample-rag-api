@@ -1,69 +1,34 @@
-using System.Linq.Expressions;
+﻿using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
-using SampleRag.Domain.Models;
-using SampleRag.Domain.Models.Enums;
+using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Application.Services;
 
-public class ChatService(
-    IDataGenerator dataGenerator,
-    IRepository<Guid, Chat> chatRepository) : IChatService
+public class ChatService(IFilterRepository<Guid, Chat, GetChatsByModel> repository) : IChatService
 {
     public async Task<IEnumerable<Chat>> AddAsync(params Chat[] items)
     {
-        return await chatRepository.AddAsync(items);
+        return await repository.AddAsync(items);
     }
 
-    public async Task<IEnumerable<Chat>> GetBatchByAsync(Expression<Func<Chat, bool>> expression, int batchSize)
+    public async Task<IEnumerable<Chat>> GetBatchByAsync(GetChatsByModel model)
     {
-        return await chatRepository.GetBatchByAsync(expression, batchSize);
+        return await repository.GetBatchByAsync(model);
     }
 
     public async Task<IEnumerable<Chat>> GetByIdsAsync(params Guid[] ids)
     {
-        return await chatRepository.GetByIdsAsync(ids);
+        return await repository.GetByIdsAsync(ids);
     }
 
     public async Task RemoveByIdsAsync(params Guid[] ids)
     {
-        await chatRepository.RemoveByIdsAsync(ids);
-    }
-
-    public async IAsyncEnumerable<MessagePart> StartNewChat(Message firstUserMessage)
-    {
-        var newChat = new Chat
-        {
-            Name = "New chat",
-        };
-
-        await chatRepository.AddAsync([newChat]);
-
-        firstUserMessage.ChatId = newChat.Id;
-        yield return new MessagePart
-        {
-            Step = GenerationStep.NewChatName,
-            NewChatId = newChat.Id,
-            Text = newChat.Name,
-        };
-
-        /*newChat.Name = string.Empty;
-        var prompt = @"";
-
-        await foreach (var part in dataGenerator.GenerateStreamingData(firstUserMessage.Text))
-        {
-            newChat.Name += part;
-            yield return new MessagePart
-            {
-                Text = part
-            };
-        }*/
-
-        await chatRepository.UpdateAsync([newChat]);
+        await repository.RemoveByIdsAsync(ids);
     }
 
     public async Task UpdateAsync(params Chat[] items)
     {
-        await chatRepository.UpdateAsync(items);
+        await repository.UpdateAsync(items);
     }
 }

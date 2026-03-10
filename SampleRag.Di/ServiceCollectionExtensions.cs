@@ -5,30 +5,29 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using SampleRag.Application.Factories;
-using SampleRag.Application.KernelFunctions.Plugins;
+using SampleRag.Application.Plugins;
 using SampleRag.Application.Services;
-using SampleRag.Di.Mapping;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Factories;
 using SampleRag.Domain.Interfaces.Services;
-using SampleRag.Domain.Models;
 using SampleRag.Domain.Models.Configs;
+using SampleRag.Domain.RequestModels;
 using SampleRag.Infrastructure.DataGenerators;
 using SampleRag.Infrastructure.EmbeddingGenerators;
 using SampleRag.Infrastructure.Repositories.Files;
 using SampleRag.Infrastructure.Repositories.Mongo;
 using SampleRag.Infrastructure.Repositories.Vector;
-using System.Reflection;
-using ApiDocument = SampleRag.Domain.Models.Document;
+using ApiDocument = SampleRag.Domain.Entities.Db.Document;
 
 namespace SampleRag.Di;
 
@@ -46,7 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IDocumentService, DocumentService>();
         services.AddTransient<IMessagesService, MessagesService>();
         services.AddTransient<IChatService, ChatService>();
-        services.AddTransient<IKnowledgeScopeUserService, KnowledgeScopeUserService>();
+        services.AddTransient<IKnowledgeScopeService, KnowledgeScopeService>();
 
         // Configure IMongoDatabase
         var dbSettings = configuration.GetSection(nameof(DbSettings)).Get<DbSettings>();
@@ -54,14 +53,24 @@ public static class ServiceCollectionExtensions
         {
             // Program.cs — ДО создания MongoClient!
             BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+            BsonClassMap.RegisterClassMap<ApiDocument>(cm =>
+            {
+                cm.AutoMap();
+                cm.MapProperty(x => x.Vector).SetShouldSerializeMethod(_ => false);
+            });
+            BsonClassMap.RegisterClassMap<DocumentChunk>(cm =>
+            {
+                cm.AutoMap();
+                cm.MapProperty(x => x.Vector).SetShouldSerializeMethod(_ => false);
+            });
             services.AddSingleton(new MongoClient(dbSettings.ConnectionString).GetDatabase(dbSettings.DatabaseName));
         }
 
-        services.AddTransient<IRepository<Guid, ApiDocument>, MongoBaseRepository<ApiDocument>>();
-        services.AddTransient<IRepository<Guid, DocumentChunk>, MongoBaseRepository<DocumentChunk>>();
-        services.AddTransient<IRepository<Guid, Message>, MongoBaseRepository<Message>>();
-        services.AddTransient<IRepository<Guid, Chat>, MongoBaseRepository<Chat>>();
-        services.AddTransient<IKnowledgeScopeRepository, KnowledgeScopeRepository>();
+        services.AddTransient<IFilterRepository<Guid, DocumentChunk, GetDocumentChunksByModel>, DocumentChunkRepository>();
+        services.AddTransient<IFilterRepository<Guid, ApiDocument, GetDocumentsByModel>, DocumentRepository>();
+        services.AddTransient<IFilterRepository<Guid, Message, GetMessagesByModel>, MessageRepository>();
+        services.AddTransient<IFilterRepository<Guid, Chat, GetChatsByModel>, ChatRepository>();
+        services.AddTransient<IFilterRepository<Guid, KnowledgeScope, GetBatchByModel>, KnowledgeScopeRepository>();
         services.AddTransient<IKnowledgeScopeUserRepository, KnowledgeScopeUserRepository>();
 
         services.AddTransient<IVectorRepository<DocumentChunk>, QdrantDocumentChunkRepository>();

@@ -8,7 +8,7 @@ namespace SampleRag.Infrastructure.Repositories.Mongo;
 public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<Guid, TModel>
     where TModel : IEntity<Guid>
 {
-    protected readonly IMongoCollection<TModel> _collection = database.GetCollection<TModel>(typeof(TModel).Name, new MongoCollectionSettings 
+    protected readonly IMongoCollection<TModel> collection = database.GetCollection<TModel>(typeof(TModel).Name, new MongoCollectionSettings
     {
         AssignIdOnInsert = true,
     });
@@ -19,7 +19,7 @@ public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<
 
         try
         {
-            await _collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = false });
+            await collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = false });
         }
         catch (MongoBulkWriteException<TModel> ex)
         {
@@ -37,21 +37,21 @@ public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<
                 item
             )).ToList();
 
-        await _collection.BulkWriteAsync(bulkOps);
+        await collection.BulkWriteAsync(bulkOps);
     }
 
     public async Task<IEnumerable<TModel>> GetBatchByAsync(Expression<Func<TModel, bool>>? predicate, int? batchSize)
     {
         var sortDefinition = Builders<TModel>.Sort.Ascending("_id");
-        var builder = Builders<TModel>.Filter;
+        var filterBuilder = Builders<TModel>.Filter;
         var filter = Builders<TModel>.Filter.Empty;
 
         if (predicate != null)
         {
-            filter &= builder.Where(predicate);
+            filter &= filterBuilder.Where(predicate);
         }
 
-        var query = _collection.Find(filter).Sort(sortDefinition);
+        var query = collection.Find(filter).Sort(sortDefinition);
 
         if (batchSize.HasValue)
         {
@@ -65,13 +65,13 @@ public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<
     {
         var filter = Builders<TModel>.Filter.In(x => x.Id, ids);
 
-        return await _collection.Find(filter).ToListAsync();
+        return await collection.Find(filter).ToListAsync();
     }
 
     public async Task RemoveByIdsAsync(params Guid[] ids)
     {
         var filter = Builders<TModel>.Filter.In(x => x.Id, ids);
 
-        await _collection.DeleteManyAsync(filter);
+        await collection.DeleteManyAsync(filter);
     }
 }

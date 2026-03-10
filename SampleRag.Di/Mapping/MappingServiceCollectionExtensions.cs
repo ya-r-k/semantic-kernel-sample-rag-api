@@ -2,9 +2,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using SampleRag.Application.KernelFunctions.Plugins;
+using SampleRag.Application.Plugins;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Models;
 using SampleRag.Domain.Models.Enums;
+using SampleRag.Domain.RequestModels;
+using System.Security.Claims;
 using OllamaChatResponseStream = OllamaSharp.Models.Chat.ChatResponseStream;
 using OllamaFunction = OllamaSharp.Models.Chat.Message.Function;
 using OllamaToolCall = OllamaSharp.Models.Chat.Message.ToolCall;
@@ -20,7 +23,7 @@ public static class MappingServiceCollectionExtensions
             .Map(dest => dest.Role, src => GetAuthorRole(src))
             .Compile();
 
-        TypeAdapterConfig.GlobalSettings.NewConfig<StreamingChatMessageContent, MessagePart>()
+        TypeAdapterConfig.GlobalSettings.NewConfig<StreamingChatMessageContent, MessagePartResponse>()
             .Map(dest => dest.Text, src => GetMessagePartText(src))
             .Map(dest => dest.Step, src => GetMessagePartGenerationStep(src))
             .Map(dest => dest.ToolsCalls, src => GetTools(src))
@@ -30,15 +33,15 @@ public static class MappingServiceCollectionExtensions
             .MapWith(src => src.Function ?? new ())
             .Compile();
 
-        TypeAdapterConfig.GlobalSettings.NewConfig<OllamaToolCall, ToolCall>()
-            .MapWith(src => src.Function.Adapt<ToolCall>())
+        TypeAdapterConfig.GlobalSettings.NewConfig<OllamaToolCall, ToolCallResponse>()
+            .MapWith(src => src.Function.Adapt<ToolCallResponse>())
             .Compile();
 
-        TypeAdapterConfig.GlobalSettings.NewConfig<OllamaFunction, ToolCall>()
+        TypeAdapterConfig.GlobalSettings.NewConfig<OllamaFunction, ToolCallResponse>()
             .Map(dest => dest.Tool, src => ParseAiTool(src.Name))
             .Compile();
 
-        TypeAdapterConfig.GlobalSettings.NewConfig<ChatHistory, MessagePart>()
+        TypeAdapterConfig.GlobalSettings.NewConfig<ChatHistory, MessagePartResponse>()
             .Map(dest => dest.ToolsResults, src => GetToolsResults(src))
             .Map(dest => dest.Step, src => GenerationStep.ToolResult)
             .Compile();
@@ -47,7 +50,46 @@ public static class MappingServiceCollectionExtensions
             .MapWith(src => ParseAiTool(src))
             .Compile();
 
+        TypeAdapterConfig.GlobalSettings.NewConfig<Message, Chat>()
+            .Map(dest => dest.Name, src => string.Concat(src.Text.Take(80)))
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<Chat, MessagePartResponse>()
+            .Map(dest => dest.Text, src => src.Name)
+            .Map(dest => dest.Step, src => GenerationStep.NewChatName)
+            .Map(dest => dest.NewChatId, src => src.Id)
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<(CreateChatRequest request, ClaimsPrincipal claims), Chat>()
+            .MapWith(src => src.request.Adapt<Chat>())
+            .Map(dest => dest.OwnerIds, src => GetOwnerIds(src.request, src.claims))
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<ClaimsPrincipal, string>()
+            .MapWith(src => src.FindFirstValue(ClaimTypes.NameIdentifier) ?? src.FindFirstValue("sub"))
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<(CreateScopeRequest scope, ClaimsPrincipal claims), CreateScopeRequest>()
+            .MapWith(src => src.scope)
+            .Map(dest => dest.UsersIds, src => src.scope.UsersIds.Append(src.claims.Adapt<string>()))
+            .Compile();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<(CreateScopeRequest[] scopes, ClaimsPrincipal claims), CreateScopeRequest[]>()
+            .MapWith(src => src.scopes.Select(x => new CreateScopeRequest
+            {
+                Name = x.Name,
+                UsersIds = x.UsersIds.Append(src.claims.Adapt<string>()).ToArray(),
+            }).ToArray())
+            .Compile();
+
         return services;
+    }
+
+    private static string[] GetOwnerIds(CreateChatRequest request, ClaimsPrincipal claims)
+    {
+        var userId = claims.FindFirstValue(ClaimTypes.NameIdentifier) ?? claims.FindFirstValue("sub") ?? "unknown";
+
+        return request.OwnerIds?.Length > 0 ? [.. request.OwnerIds, userId] : [userId];
     }
 
     private static AuthorRole GetAuthorRole(Message src)
@@ -95,14 +137,14 @@ public static class MappingServiceCollectionExtensions
         return innerContent.Message.ToolCalls;
     }
 
-    private static IEnumerable<ToolResult>? GetToolsResults(ChatHistory src)
+    private static IEnumerable<ToolResultResponse>? GetToolsResults(ChatHistory src)
     {
         return src.Where(x => x.Role == AuthorRole.Tool)
             .SelectMany(x => x.Items)
             .Select(x => (x as FunctionResultContent)?.Result)
             .Where(x => x != null)
             .GroupBy(GetToolKey)
-            .Select(x => new ToolResult
+            .Select(x => new ToolResultResponse
             {
                 Tool = x.Key,
                 Value = x.Key switch

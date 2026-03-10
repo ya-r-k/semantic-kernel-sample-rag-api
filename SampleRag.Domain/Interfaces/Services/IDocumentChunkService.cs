@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
-using SampleRag.Domain.Models;
+using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Domain.Interfaces.Services;
 
@@ -10,5 +11,5 @@ public interface IDocumentChunkService
 {
     Task<IEnumerable<DocumentChunk>> ChunkAsync(Document data, CancellationToken ct = default);
 
-    Task<IEnumerable<DocumentChunk>> GetBatchByAsync(Expression<Func<DocumentChunk, bool>> expression, int batchSize);
+    Task<IEnumerable<DocumentChunk>> GetBatchByAsync(GetDocumentChunksByModel model);
 }

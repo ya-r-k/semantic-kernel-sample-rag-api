@@ -2,8 +2,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
-using SampleRag.Domain.Models;
 using SampleRag.Domain.Models.Configs;
 
 namespace SampleRag.Infrastructure.Repositories.Vector;
@@ -20,8 +20,7 @@ public class QdrantDocumentChunkRepository(
             Properties =
             [
                 new VectorStoreKeyProperty("Id", typeof(Guid)),
-                new VectorStoreDataProperty("PageNumber", typeof(int)),
-                new VectorStoreDataProperty("ChunkIndex", typeof(int?)),
+                new VectorStoreDataProperty("Text", typeof(int)),
                 new VectorStoreVectorProperty("Vector", typeof(ReadOnlyMemory<float>), dimensions: 1024) 
                 { 
                     DistanceFunction = DistanceFunction.CosineSimilarity,

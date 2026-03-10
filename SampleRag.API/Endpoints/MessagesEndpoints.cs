@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
 using SampleRag.Domain.RequestModels;
@@ -13,12 +14,20 @@ public static class MessagesEndpoints
         var group = routes.MapGroup("api/messages").WithTags("Messages");
         group.MapPost("/", SendUserMessage)
             .RequireAuthorization()
-            .Produces<MessagePart>(StatusCodes.Status200OK)
+            .Produces<MessagePartResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status403Forbidden)
             .Accepts<SendMessageRequest>("application/json");
+
+        group.MapPost("/filter", async ([FromBody] GetMessagesByModel model, IMessagesService messageService, CancellationToken ct) =>
+        {
+            return Results.Ok(await messageService.GetBatchByAsync(model));
+        })
+            //.RequireAuthorization()
+            .Produces<Message>(StatusCodes.Status200OK)
+            .Accepts<GetMessagesByModel>("application/json");
     }
 
-    public static async IAsyncEnumerable<MessagePart> SendUserMessage(
+    public static async IAsyncEnumerable<MessagePartResponse> SendUserMessage(
         [FromBody] SendMessageRequest message,
         IMessagesService messagesService,
         ClaimsPrincipal user)

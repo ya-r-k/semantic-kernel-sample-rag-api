@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.AI;
-using SampleRag.Domain.Models;
+using SampleRag.Domain.Entities.Db;
 
 namespace SampleRag.Infrastructure.EmbeddingGenerators;
 

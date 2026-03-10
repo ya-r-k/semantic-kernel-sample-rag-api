@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.API.Filters;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
 
@@ -28,5 +29,22 @@ public static class DocumentsEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)
             .Accepts<UploadDocumentRequestModel>("application/json");
+
+        group.MapPost("/filter", async ([FromBody] GetDocumentsByModel model, IDocumentService documentService, CancellationToken ct) =>
+        {
+            return Results.Ok(await documentService.GetBatchByAsync(model));
+        })
+            //.RequireAuthorization("RequireAdministrator")
+            .Produces<Document>(StatusCodes.Status200OK)
+            .Accepts<GetDocumentsByModel>("application/json");
+
+        group.MapDelete("{id:guid}", async (Guid id, IDocumentService documentService, CancellationToken ct) =>
+        {
+            await documentService.RemoveByIdsAsync(id);
+
+            return Results.NoContent();
+        })
+            //.RequireAuthorization("RequireAdministrator")
+            .Produces<Document>(StatusCodes.Status204NoContent);
     }
 }

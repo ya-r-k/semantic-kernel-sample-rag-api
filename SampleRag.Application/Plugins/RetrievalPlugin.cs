@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
 using Microsoft.SemanticKernel;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
-using SampleRag.Domain.Models;
 
-namespace SampleRag.Application.KernelFunctions.Plugins;
+namespace SampleRag.Application.Plugins;
 
 public class RetrievalPlugin(IVectorRepository<DocumentChunk> chunkRepository)
 {
@@ -21,7 +21,7 @@ public class RetrievalPlugin(IVectorRepository<DocumentChunk> chunkRepository)
                 Id = Guid.NewGuid(),
                 DocumentId = Guid.NewGuid(),
             },
-            new () 
+            new ()
             {
                 Id = Guid.NewGuid(),
                 DocumentId = Guid.NewGuid(),

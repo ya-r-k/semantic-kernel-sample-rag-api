@@ -5,8 +5,6 @@ namespace SampleRag.Domain.Models;
 /// </summary>
 public class SourceReference
 {
-    public Guid ChunkId { get; set; }
-
     public Guid DocumentId { get; set; }
 
     public int PageNumber { get; set; }

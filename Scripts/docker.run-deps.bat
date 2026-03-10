@@ -9,7 +9,7 @@ docker run -d --name mongodb -p 27017:27017 -v "D:\Development Data\Docker Volum
 
 REM Запуск Ollama
 
-docker run -d --gpus=all  --name ollama -p 11434:11434 -v "D:\Development Data\Docker Volumes\ai-models-files":/root/.ollama --cpus=8 --cpu-shares=1024 ollama/ollama:0.15.6
+docker run -d --gpus=all  --name ollama -p 11434:11434 -v "D:\Development Data\Docker Volumes\ai-models-files":/root/.ollama --cpus=8 --cpu-shares=1024 ollama/ollama:0.17.6
 docker update --cpu-shares=512 mongodb qdrant
 
 @echo Скрипт завершен. Проверьте контейнеры командой: docker ps 

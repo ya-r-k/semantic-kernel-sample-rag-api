@@ -1,11 +1,10 @@
-using System.Linq.Expressions;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.API.Filters;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
-using SampleRag.Domain.Models;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.API.Endpoints;
@@ -15,20 +14,13 @@ public static class ChatsEndpoints
     public static void MapChatsEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("api/chats").WithTags("Chats");
-        group.MapPost("/", async ([FromBody] CreateChatRequest request, IChatService chatService, ClaimsPrincipal user, CancellationToken ct) =>
+        group.MapPost("/", async ([FromBody] CreateChatRequest request, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
         {
-            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub") ?? "unknown";
-            var ownerIds = request.OwnerIds?.Length > 0 ? request.OwnerIds : [userId];
-
-            var chat = new Chat
-            {
-                Name = request.Title,
-                ScopeId = request.ScopeId,
-                OwnerIds = ownerIds,
-            };
+            var chat = (request, claims).Adapt<Chat>();
 
             var result = await chatService.AddAsync(chat);
             var created = result.FirstOrDefault();
+
             return created is not null
                 ? Results.Created($"/api/chats/{created.Id}", created)
                 : Results.StatusCode(StatusCodes.Status500InternalServerError);
@@ -40,25 +32,23 @@ public static class ChatsEndpoints
             .Produces(StatusCodes.Status403Forbidden)
             .Accepts<CreateChatRequest>("application/json");
 
-        group.MapGet("/", async ([FromQuery] int batchSize, [FromQuery] Guid? lastUsedIndex, IRepository<Guid, Chat> chatsRepository, CancellationToken ct) =>
+        group.MapPost("/filter", async ([FromBody] GetChatsByModel model, IChatService chatService, CancellationToken ct) =>
         {
-            Expression<Func<Chat, bool>>? expression = null;
-
-            if (lastUsedIndex.HasValue)
-            {
-                expression = x => x.Id > lastUsedIndex;
-            }
-
-            var result = await chatsRepository.GetBatchByAsync(expression, batchSize);
-
-            return Results.Ok(result);
+            return Results.Ok(await chatService.GetBatchByAsync(model));
         })
             .RequireAuthorization()
             .Produces<Chat>(StatusCodes.Status200OK);
 
-        group.MapDelete("{id}", async (Guid id, IRepository<Guid, Chat> chatsRepository, CancellationToken ct) =>
+        group.MapPatch("{id:guid}/name/generate", async (Guid id, IChatService chatService, CancellationToken ct) =>
         {
-            await chatsRepository.RemoveByIdsAsync(id);
+            throw new NotImplementedException();
+        })
+            .RequireAuthorization()
+            .Produces<Chat>(StatusCodes.Status204NoContent);
+
+        group.MapDelete("{id:guid}", async (Guid id, IChatService chatService, CancellationToken ct) =>
+        {
+            await chatService.RemoveByIdsAsync(id);
 
             return Results.NoContent();
         })

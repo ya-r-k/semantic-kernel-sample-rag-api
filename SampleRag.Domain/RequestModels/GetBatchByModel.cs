@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-namespace SampleRag.Domain.RequestModels;
+﻿namespace SampleRag.Domain.RequestModels;
 
 public class GetBatchByModel
 {

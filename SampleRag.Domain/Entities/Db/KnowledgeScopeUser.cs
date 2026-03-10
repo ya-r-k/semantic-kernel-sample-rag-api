@@ -1,6 +1,6 @@
 using SampleRag.Domain.Models.Abstractions;
 
-namespace SampleRag.Domain.Models;
+namespace SampleRag.Domain.Entities.Db;
 
 /// <summary>
 /// Associates a user with a scope. Uniqueness: (ScopeId, UserId).

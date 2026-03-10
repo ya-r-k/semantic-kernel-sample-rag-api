@@ -5,10 +5,10 @@ namespace SampleRag.Infrastructure.Repositories.Files;
 
 public class LocalFileRepository(FilesStorageSettings config) : IFileRepository
 {
-    public async Task<string> SaveAsync(string data, string fileName)
+    public async Task<string> SaveAsync(string directoryPath, string fileName, string data)
     {
-        var path = Path.Combine(config.BasePath, "assets\\documents", fileName);
-        var result = $"api/assets/documents/{fileName}";
+        var result = Path.Combine("assets\\documents", fileName);
+        var path = Path.Combine(config.BasePath, result);
 
         path = Path.Combine(config.BasePath, path);
         await File.WriteAllBytesAsync(path, Convert.FromBase64String(data));

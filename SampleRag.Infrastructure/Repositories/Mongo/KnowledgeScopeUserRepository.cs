@@ -1,6 +1,6 @@
 using MongoDB.Driver;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
-using SampleRag.Domain.Models;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Infrastructure.Repositories.Mongo;
@@ -19,33 +19,49 @@ public class KnowledgeScopeUserRepository(IMongoDatabase database) : IKnowledgeS
         return await collection.CountDocumentsAsync(filter, cancellationToken: ct) > 0;
     }
 
-    public async Task AddUserAsync(Guid scopeId, string userId, CancellationToken ct = default)
+    public async Task<IEnumerable<KnowledgeScopeUser>> AddAsync(KnowledgeScopeUser[] items, CancellationToken ct = default)
     {
-        var existing = await HasAccessAsync(scopeId, userId, ct);
-        if (existing)
+        var addedItems = new List<KnowledgeScopeUser>(items);
+
+        try
         {
-            return;
+            await collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = false }, ct);
+        }
+        catch (MongoBulkWriteException<KnowledgeScopeUser> ex)
+        {
+            addedItems = [.. addedItems.Except(ex.WriteErrors.Select(err => items[err.Index]))];
         }
 
-        var scopeUser = new KnowledgeScopeUser { ScopeId = scopeId, UserId = userId };
-        await collection.InsertOneAsync(scopeUser, cancellationToken: ct);
+        return addedItems;
     }
 
-    public async Task RemoveUserAsync(Guid scopeId, string userId, CancellationToken ct = default)
+    public async Task RemoveUserAsync(Guid scopeId, string[] usersId, CancellationToken ct = default)
     {
         var filter = Builders<KnowledgeScopeUser>.Filter.And(
             Builders<KnowledgeScopeUser>.Filter.Eq(x => x.ScopeId, scopeId),
-            Builders<KnowledgeScopeUser>.Filter.Eq(x => x.UserId, userId));
+            Builders<KnowledgeScopeUser>.Filter.In(x => x.UserId, usersId));
 
         await collection.DeleteManyAsync(filter, ct);
     }
 
     public async Task<IEnumerable<Guid>> GetScopeIdsForUserAsync(GetBatchByModel filterModel, string userId, CancellationToken ct = default)
     {
-        var filter = Builders<KnowledgeScopeUser>.Filter.Eq(x => x.UserId, userId);
-        var cursor = await collection.FindAsync(filter, cancellationToken: ct);
-        var users = await cursor.ToListAsync(ct);
+        var sortDefinition = Builders<KnowledgeScopeUser>.Sort.Ascending("_id");
+        var filterBuilder = Builders<KnowledgeScopeUser>.Filter;
+        var filter = Builders<KnowledgeScopeUser>.Filter.Empty;
 
+        filter &= filterBuilder.Where(x => x.UserId == userId);
+
+        if (filterModel.LastId.HasValue)
+        {
+            filter &= filterBuilder.Where(x => x.Id > filterModel.LastId.Value);
+        }
+
+        var query = collection.Find(filter)
+            .Sort(sortDefinition)
+            .Limit(filterModel.BatchSize);
+
+        var users = await query.ToListAsync();
         return users.Select(u => u.ScopeId).Distinct();
     }
 }

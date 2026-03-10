@@ -1,7 +1,7 @@
-using System.Linq.Expressions;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
-using SampleRag.Domain.Models;
+using SampleRag.Domain.RequestModels;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
@@ -13,7 +13,7 @@ namespace SampleRag.Application.Services;
 /// </summary>
 public class DocumentChunkService(
     IFileRepository fileRepository,
-    IRepository<Guid, DocumentChunk> dbRepository
+    IFilterRepository<Guid, DocumentChunk, GetDocumentChunksByModel> dbRepository
     ) : IDocumentChunkService
 {
     private const int MaxCharsPerChunk = 500;
@@ -61,19 +61,20 @@ public class DocumentChunkService(
                 chunk.DocumentId = data.Id;
                 chunk.ScopeId = data.ScopeId;
                 chunk.ChunkIndex = lastChunkIndex++;
+
                 chunks.Add(chunk);
             }
         }
 
-        return chunks;
+        return await dbRepository.AddAsync([.. chunks]);
     }
 
-    public async Task<IEnumerable<DocumentChunk>> GetBatchByAsync(Expression<Func<DocumentChunk, bool>> predicate, int batchSize)
+    public async Task<IEnumerable<DocumentChunk>> GetBatchByAsync(GetDocumentChunksByModel model)
     {
-        return await dbRepository.GetBatchByAsync(predicate, batchSize);
+        return await dbRepository.GetBatchByAsync(model);
     }
 
-    private static List<DocumentChunk> SplitPageText(string text, int pageNumber)
+    private List<DocumentChunk> SplitPageText(string text, int pageNumber)
     {
         if (text.Length <= MaxCharsPerChunk)
         {
@@ -86,7 +87,7 @@ public class DocumentChunkService(
                 },
             ];
         }
-            
+
         var chunks = new List<DocumentChunk>();
         var start = 0;
 

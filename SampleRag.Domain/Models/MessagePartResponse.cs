@@ -3,7 +3,7 @@ using SampleRag.Domain.Models.Enums;
 
 namespace SampleRag.Domain.Models;
 
-public class MessagePart
+public class MessagePartResponse
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Text { get; set; }
@@ -18,8 +18,8 @@ public class MessagePart
     public Guid? NewChatId { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ToolCall[] ToolsCalls { get; set; }
+    public ToolCallResponse[] ToolsCalls { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ToolResult[]? ToolsResults { get; set; }
+    public ToolResultResponse[]? ToolsResults { get; set; }
 }

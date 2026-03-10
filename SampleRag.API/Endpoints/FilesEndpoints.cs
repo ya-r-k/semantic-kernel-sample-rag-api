@@ -16,7 +16,7 @@ public static class FilesEndpoints
             {
                 return Results.NotFound();
             }
-            
+
             return Results.File(stream, enableRangeProcessing: true, contentType: "application/pdf");
         })
             //.RequireAuthorization()

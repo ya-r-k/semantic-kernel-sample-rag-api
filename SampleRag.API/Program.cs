@@ -1,5 +1,4 @@
 using System.Threading.RateLimiting;
-using Mapster;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -80,9 +79,6 @@ else
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
 });*/
 
-TypeAdapterConfig.GlobalSettings.Scan(AppDomain.CurrentDomain.GetAssemblies());
-TypeAdapterConfig.GlobalSettings.Compile();
-
 builder.Services.ConfigureMapster();
 builder.Services.ConfigureAiDependencies(builder.Configuration);
 builder.Services.ConfigureDependencies(builder.Configuration, builder.Environment);
@@ -111,5 +107,4 @@ app.MapDocumentsEndpoints();
 app.MapFilesEndpoints();
 app.MapKnowledgeScopesEndpoints();
 
-// app.AddKernelMemoryEndpoints(apiPrefix: "/rag");
 app.Run();

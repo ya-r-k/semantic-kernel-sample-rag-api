@@ -1,45 +1,43 @@
+using System.Linq.Expressions;
 using Mapster;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
 using SampleRag.Domain.Models.Enums;
 using SampleRag.Domain.RequestModels;
-using System.Linq.Expressions;
 
 namespace SampleRag.Application.Services;
 
 public class MessagesService(
-    IChatService chatService,
     IDataGenerator dataGenerator,
-    IRepository<Guid, Message> messagesRepository) : IMessagesService
+    IChatService chatService,
+    IFilterRepository<Guid, Message, GetMessagesByModel> messagesRepository) : IMessagesService
 {
-    public async IAsyncEnumerable<MessagePart> GenerateAiResponce(SendMessageRequest request, string userId)
+    public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest request, string userId)
     {
         var userMessage = request.Adapt<Message>();
-        var result = new List<IAsyncEnumerable<MessagePart>>();
 
         if (userMessage.ChatId.Equals(Guid.Empty))
         {
-            result.Add(chatService.StartNewChat(userMessage));
+            var chat = userMessage.Adapt<Chat>();
+            await chatService.AddAsync(chat);
+
+            yield return chat.Adapt<MessagePartResponse>();
         }
 
-        result.Add(GenerateAiMessage(userMessage));
-
-        foreach (var parts in result)
+        await foreach (var part in GenerateAiMessage(userMessage))
         {
-            await foreach (var part in parts)
-            {
-                yield return part;
-            }
+            yield return part;
         }
     }
 
-    public async Task<IEnumerable<Message>> GetBatchByAsync(Expression<Func<Message, bool>> expression, int batchSize)
+    public async Task<IEnumerable<Message>> GetBatchByAsync(GetMessagesByModel model)
     {
-        return await messagesRepository.GetBatchByAsync(expression, batchSize);
+        return await messagesRepository.GetBatchByAsync(model);
     }
 
-    private async IAsyncEnumerable<MessagePart> GenerateAiMessage(Message userMessage)
+    private async IAsyncEnumerable<MessagePartResponse> GenerateAiMessage(Message userMessage)
     {
         userMessage.CreatedAt = DateTime.UtcNow;
         var messagesHistory = await messagesRepository.GetBatchByAsync(x => x.ChatId.Equals(userMessage.ChatId), 30);
@@ -55,7 +53,10 @@ public class MessagesService(
 
         await foreach (var part in dataGenerator.GenerateStreamingData(messagesHistory.Append(userMessage), "naive-rag"))
         {
-            aiMessage.Text += part.Text;
+            if (part.Step is GenerationStep.ResponseMessage)
+            {
+                aiMessage.Text += part.Text;
+            }
 
             if (part.Step == prevGenerationStep)
             {
@@ -73,7 +74,7 @@ public class MessagesService(
 
         await messagesRepository.AddAsync([userMessage, aiMessage]);
 
-        yield return new MessagePart
+        yield return new MessagePartResponse
         {
             CreatedAt = aiMessage.CreatedAt,
         };

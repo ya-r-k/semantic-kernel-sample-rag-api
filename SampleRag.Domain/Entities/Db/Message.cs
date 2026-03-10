@@ -1,6 +1,7 @@
+using SampleRag.Domain.Models;
 using SampleRag.Domain.Models.Abstractions;
 
-namespace SampleRag.Domain.Models;
+namespace SampleRag.Domain.Entities.Db;
 
 public class Message : IEntity<Guid>
 {

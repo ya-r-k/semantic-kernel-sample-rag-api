@@ -1,5 +1,5 @@
 ﻿using System.Linq.Expressions;
-using SampleRag.Domain.Models;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Domain.Interfaces.Services;
@@ -14,5 +14,5 @@ public interface IDocumentService
 
     Task<IEnumerable<Document>> GetByIdsAsync(params Guid[] ids);
 
-    Task<IEnumerable<Document>> GetBatchByAsync(Expression<Func<Document, bool>> expression, int batchSize);
+    Task<IEnumerable<Document>> GetBatchByAsync(GetDocumentsByModel model);
 }

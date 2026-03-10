@@ -2,9 +2,9 @@
 
 namespace SampleRag.Domain.Models;
 
-public class ToolResult
+public class ToolCallResponse
 {
     public AiTool Tool { get; set; }
 
-    public object Value { get; set; }
+    public Dictionary<string, object> Arguments { get; set; }
 }

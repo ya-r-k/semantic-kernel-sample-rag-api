@@ -1,3 +1,4 @@
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Domain.Interfaces;
@@ -9,9 +10,9 @@ public interface IKnowledgeScopeUserRepository
 {
     Task<bool> HasAccessAsync(Guid scopeId, string userId, CancellationToken ct = default);
 
-    Task AddUserAsync(Guid scopeId, string userId, CancellationToken ct = default);
+    Task<IEnumerable<KnowledgeScopeUser>> AddAsync(KnowledgeScopeUser[] items, CancellationToken ct = default);
 
-    Task RemoveUserAsync(Guid scopeId, string userId, CancellationToken ct = default);
+    Task RemoveUserAsync(Guid scopeId, string[] usersId, CancellationToken ct = default);
 
     Task<IEnumerable<Guid>> GetScopeIdsForUserAsync(GetBatchByModel filterModel, string userId, CancellationToken ct = default);
 }

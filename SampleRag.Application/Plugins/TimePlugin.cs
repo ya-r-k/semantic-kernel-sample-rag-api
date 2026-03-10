@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using Microsoft.SemanticKernel;
 
-namespace SampleRag.Application.KernelFunctions.Plugins;
+namespace SampleRag.Application.Plugins;
 
 public class TimePlugin
 {

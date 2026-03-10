@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using Mapster;
 using Microsoft.AspNetCore.Mvc;
+using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
-using SampleRag.Domain.Models;
+using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.API.Endpoints;
@@ -13,44 +15,35 @@ public static class KnowledgeScopesEndpoints
         var group = routes.MapGroup("api/knowledgescopes").WithTags("KnowledgeScopes");
 
         group.MapPost("/", async (
-            [FromBody] CreateGroupRequest request,
-            IKnowledgeScopeRepository scopeRepository,
-            IKnowledgeScopeUserRepository scopeUserRepository,
-            ClaimsPrincipal user,
+            [FromBody] CreateScopeRequest[] request,
+            IKnowledgeScopeService scopeService,
+            ClaimsPrincipal claims,
             CancellationToken ct) =>
         {
-            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub") ?? "unknown";
+            var scopes = (request, claims).Adapt<CreateScopeRequest[]>();
 
-            var scope = new KnowledgeScope { Name = request.Name };
-            var result = await scopeRepository.AddAsync(scope);
-            var created = result.FirstOrDefault();
-            if (created is not null)
-            {
-                await scopeUserRepository.AddUserAsync(created.Id, userId, ct);
-            }
-
-            return Results.Created($"/api/knowledgescopes/{created?.Id}", created);
+            var result = await scopeService.AddAsync(scopes);
+            return Results.Created($"/api/knowledgescopes/", result);
         })
             .RequireAuthorization("RequireAdministrator")
             .Produces<KnowledgeScope>(StatusCodes.Status201Created)
-            .Accepts<CreateGroupRequest>("application/json");
+            .Accepts<CreateScopeRequest>("application/json");
 
         group.MapPost("/filter", async (
-            GetBatchByModel model,
-            IKnowledgeScopeRepository scopeRepository,
-            ClaimsPrincipal user,
+            [FromBody] GetBatchByModel model,
+            ClaimsPrincipal claims,
+            IKnowledgeScopeService scopeService,
             CancellationToken ct) =>
         {
-            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
-
-            IEnumerable<KnowledgeScope> result;
+            var userId = claims.Adapt<string>();
+            var result = Enumerable.Empty<KnowledgeScope>();
             if (!string.IsNullOrEmpty(userId))
             {
-                result = await scopeRepository.GetBatchByAsync(model);
+                result = await scopeService.GetBatchByAsync(model, userId, ct);
             }
             else
             {
-                result = await scopeRepository.GetBatchByAsync(model);
+                result = await scopeService.GetBatchByAsync(model, ct);
             }
 
             return Results.Ok(result);
@@ -61,10 +54,10 @@ public static class KnowledgeScopesEndpoints
         group.MapPost("{id:guid}/users", async (
             Guid id,
             [FromBody] AddScopeUserRequest body,
-            IKnowledgeScopeUserRepository scopeUserRepository,
+            IKnowledgeScopeService scopeUserService,
             CancellationToken ct) =>
         {
-            await scopeUserRepository.AddUserAsync(id, body.UserId, ct);
+            await scopeUserService.AddUsersAsync(id, body.UsersId, ct);
             return Results.NoContent();
         })
             .RequireAuthorization("RequireAdministrator")
@@ -77,12 +70,10 @@ public static class KnowledgeScopesEndpoints
             IKnowledgeScopeUserRepository scopeUserRepository,
             CancellationToken ct) =>
         {
-            await scopeUserRepository.RemoveUserAsync(id, userId, ct);
+            await scopeUserRepository.RemoveUserAsync(id, [userId], ct);
             return Results.NoContent();
         })
             .RequireAuthorization("RequireAdministrator")
             .Produces(StatusCodes.Status204NoContent);
     }
 }
-
-public record AddScopeUserRequest(string UserId);

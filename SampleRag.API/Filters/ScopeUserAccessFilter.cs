@@ -5,7 +5,7 @@ using SampleRag.Domain.Models.Abstractions;
 namespace SampleRag.API.Filters;
 
 public class ScopeUserAccessFilter(
-    IKnowledgeScopeUserService scopeAccessService,
+    IKnowledgeScopeService scopeAccessService,
     ClaimsPrincipal user) : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

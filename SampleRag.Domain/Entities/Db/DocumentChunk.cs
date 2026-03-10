@@ -1,6 +1,6 @@
 ﻿using SampleRag.Domain.Models.Abstractions;
 
-namespace SampleRag.Domain.Models;
+namespace SampleRag.Domain.Entities.Db;
 
 public class DocumentChunk : IVectorEntity<Guid, float>, IEntity<Guid>
 {
