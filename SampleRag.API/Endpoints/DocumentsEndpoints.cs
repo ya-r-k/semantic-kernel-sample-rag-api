@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.API.Filters;
+using SampleRag.Application.Services;
 using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
@@ -38,6 +39,14 @@ public static class DocumentsEndpoints
             .Produces<Document>(StatusCodes.Status200OK)
             .Accepts<GetDocumentsByModel>("application/json");
 
+        group.MapPost("/filter/ids", async ([FromBody] Guid[] ids, IDocumentService documentService, CancellationToken ct) =>
+        {
+            return Results.Ok(await documentService.GetByIdsAsync(ids));
+        })
+            //.RequireAuthorization("RequireAdministrator")
+            .Produces<Document>(StatusCodes.Status200OK)
+            .Accepts<Guid[]>("application/json");
+
         group.MapDelete("{id:guid}", async (Guid id, IDocumentService documentService, CancellationToken ct) =>
         {
             await documentService.RemoveByIdsAsync(id);
@@ -45,6 +54,24 @@ public static class DocumentsEndpoints
             return Results.NoContent();
         })
             //.RequireAuthorization("RequireAdministrator")
-            .Produces<Document>(StatusCodes.Status204NoContent);
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapDelete("/chunks", async (IDocumentService documentService, CancellationToken ct) =>
+        {
+            await documentService.RemoveAllChunksAsync(ct);
+
+            return Results.NoContent();
+        })
+            //.RequireAuthorization("RequireAdministrator")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapDelete("/chunks/embeddings", async (IDocumentChunkService documentChunkService, CancellationToken ct) =>
+        {
+            await documentChunkService.RemoveAllEmbeddingsAsync(ct);
+
+            return Results.NoContent();
+        })
+            //.RequireAuthorization("RequireAdministrator")
+            .Produces(StatusCodes.Status204NoContent);
     }
 }

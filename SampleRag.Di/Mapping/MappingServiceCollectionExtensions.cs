@@ -46,6 +46,10 @@ public static class MappingServiceCollectionExtensions
             .Map(dest => dest.Step, src => GenerationStep.ToolResult)
             .Compile();
 
+        TypeAdapterConfig.GlobalSettings.NewConfig<ToolResultResponse[], SourceReference[]>()
+            .MapWith(src => GetSourceReferences(src))
+            .Compile();
+
         TypeAdapterConfig.GlobalSettings.NewConfig<string?, AiTool>()
             .MapWith(src => ParseAiTool(src))
             .Compile();
@@ -83,6 +87,11 @@ public static class MappingServiceCollectionExtensions
             .Compile();
 
         return services;
+    }
+
+    private static SourceReference[] GetSourceReferences(ToolResultResponse[] src)
+    {
+        return src.FirstOrDefault(x => x.Tool == AiTool.InternalDocumentData)?.Value.Adapt<SourceReference[]>() ?? [];
     }
 
     private static string[] GetOwnerIds(CreateChatRequest request, ClaimsPrincipal claims)
@@ -149,7 +158,12 @@ public static class MappingServiceCollectionExtensions
                 Tool = x.Key,
                 Value = x.Key switch
                 {
-                    AiTool.InternalDocumentData => [.. x.SelectMany(x => x as IEnumerable<DocumentChunk> ?? [])],
+                    AiTool.InternalDocumentData => x.SelectMany(x => x as IEnumerable<DocumentChunk> ?? [])
+                        .DistinctBy(x => new { x.DocumentId, x.PageNumber })
+                        .OrderBy(x => x.DocumentId)
+                        .ThenBy(x => x.PageNumber)
+                        .ToArray()
+                        .Adapt<SourceReference[]>(),
                     _ => x.Cast<object>().ToArray(),
                 },
             });

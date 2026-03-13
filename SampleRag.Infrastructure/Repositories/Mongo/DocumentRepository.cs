@@ -7,31 +7,31 @@ namespace SampleRag.Infrastructure.Repositories.Mongo;
 
 public class DocumentRepository(IMongoDatabase database) : MongoBaseRepository<Document>(database), IFilterRepository<Guid, Document, GetDocumentsByModel>
 {
-    public async Task<IEnumerable<Document>> GetBatchByAsync(GetDocumentsByModel model)
+    public async Task<IEnumerable<Document>> GetBatchByAsync(GetDocumentsByModel filterModel)
     {
         var sortDefinition = Builders<Document>.Sort.Ascending("_id");
         var filterBuilder = Builders<Document>.Filter;
         var filter = Builders<Document>.Filter.Empty;
 
-        if (model.LastId.HasValue)
+        if (filterModel.LastId.HasValue)
         {
-            filter &= filterBuilder.Where(x => x.Id > model.LastId.Value);
+            filter &= filterBuilder.Where(x => x.Id > filterModel.LastId.Value);
         }
 
-        if (model.ScopeId.HasValue)
+        if (filterModel.ScopeId.HasValue)
         {
-            filter &= filterBuilder.Where(x => x.ScopeId == model.ScopeId.Value);
+            filter &= filterBuilder.Where(x => x.ScopeId == filterModel.ScopeId.Value);
         }
 
-        if (model.IsChunked.HasValue)
+        if (filterModel.IsChunked.HasValue)
         {
-            filter &= filterBuilder.Where(x => x.IsChunked == model.IsChunked.Value);
+            filter &= filterBuilder.Where(x => x.IsChunked == filterModel.IsChunked.Value);
         }
 
         var query = collection.Find(filter)
             .Sort(sortDefinition)
-            .Limit(model.BatchSize);
+            .Limit(filterModel.BatchSize);
 
-        return await collection.Find(filter).ToListAsync();
+        return await query.ToListAsync();
     }
 }

@@ -3,10 +3,10 @@ using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Domain.Interfaces;
 
-public interface IFilterRepository<TId, TModel, TFilterModel> : IRepository<TId, TModel>
+public interface IFilterRepository<TId, TEntity, TFilterModel> : IRepository<TId, TEntity>
     where TId : unmanaged
-    where TModel : IEntity<TId>
+    where TEntity : IEntity<TId>
     where TFilterModel : GetBatchByModel
 {
-    Task<IEnumerable<TModel>> GetBatchByAsync(TFilterModel model);
+    Task<IEnumerable<TEntity>> GetBatchByAsync(TFilterModel filterModel);
 }

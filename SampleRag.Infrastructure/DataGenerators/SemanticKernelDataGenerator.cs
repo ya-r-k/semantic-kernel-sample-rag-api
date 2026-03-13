@@ -46,7 +46,7 @@ public class SemanticKernelDataGenerator(
         await foreach (var content in chatCompletion.GetStreamingChatMessageContentsAsync(chat, settingsFactory.GetSettings(executionSettingsName), kernel, cancellationToken: ct))
         {
             var result = content.Adapt<MessagePartResponse>();
-            if (content.Role == AuthorRole.Tool)
+            if (content.Role.Equals(AuthorRole.Tool))
             {
                 result = chat.Adapt<MessagePartResponse>();
             }

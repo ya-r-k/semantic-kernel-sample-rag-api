@@ -10,8 +10,7 @@ public interface IVectorRepository<TEntity> where TEntity : IVectorEntity<Guid, 
 
     Task<IEnumerable<TEntity>> RetrieveChunksAsync(string query, int topK = 5, CancellationToken ct = default);
 
-    /// <summary>
-    /// Retrieves chunks filtered by scope for RAG. Returns chunks with DocumentId and PageNumber for source citation.
-    /// </summary>
     Task<IEnumerable<TEntity>> RetrieveChunksAsync(Guid scopeId, string query, int topK = 5, CancellationToken ct = default);
+
+    Task ClearAsync(CancellationToken ct = default);
 }

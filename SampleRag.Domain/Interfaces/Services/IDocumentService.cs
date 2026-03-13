@@ -10,6 +10,8 @@ public interface IDocumentService
 
     Task UpdateAsync(params Document[] items);
 
+    Task RemoveAllChunksAsync(CancellationToken ct = default);
+
     Task RemoveByIdsAsync(params Guid[] ids);
 
     Task<IEnumerable<Document>> GetByIdsAsync(params Guid[] ids);

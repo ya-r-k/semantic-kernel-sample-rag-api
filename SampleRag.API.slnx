@@ -11,6 +11,7 @@
     <File Path=".gitignore" />
     <File Path=".cursorignore" />
     <File Path="Directory.Build.props" />
+    <File Path="Dockerfile" />
     <File Path="project.md" />
     <File Path="README.md" />
     <File Path="stylecop.json" />

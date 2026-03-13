@@ -13,22 +13,11 @@ namespace SampleRag.Application.Services;
 /// </summary>
 public class DocumentChunkService(
     IFileRepository fileRepository,
-    IFilterRepository<Guid, DocumentChunk, GetDocumentChunksByModel> dbRepository
-    ) : IDocumentChunkService
+    IFilterRepository<Guid, DocumentChunk, GetDocumentChunksByModel> dbRepository,
+    IVectorRepository<DocumentChunk> vectorRepository) : IDocumentChunkService
 {
-    private const int MaxCharsPerChunk = 500;
+    private const int MaxCharsPerChunk = 512;
     private const int OverlapChars = 128;
-
-    /*for (var i = 0; i < result.Count; i++)
-        {
-            var doc = result[i];
-            var fullPath = Path.Combine(storageSettings.BasePath ?? "", "assets/documents", Path.GetFileName(doc.LocalLink));
-            if (File.Exists(fullPath))
-            {
-                var chunks = await chunkingService.ChunkPdfAsync(fullPath, doc.Id, doc.ScopeId);
-                await chunkStore.UpsertChunksAsync([.. chunks]);
-            }
-        }*/
 
     public async Task<IEnumerable<DocumentChunk>> ChunkAsync(Document data, CancellationToken ct = default)
     {
@@ -72,6 +61,25 @@ public class DocumentChunkService(
     public async Task<IEnumerable<DocumentChunk>> GetBatchByAsync(GetDocumentChunksByModel model)
     {
         return await dbRepository.GetBatchByAsync(model);
+    }
+
+    public async Task RemoveAllAsync(CancellationToken ct = default)
+    {
+        await dbRepository.ClearAsync(ct);
+        await vectorRepository.ClearAsync(ct);
+    }
+
+    public async Task RemoveAllEmbeddingsAsync(CancellationToken ct = default)
+    {
+        await dbRepository.SetFieldValueAsync(x => x.IsVectorized, false);
+        await vectorRepository.ClearAsync(ct);
+    }
+
+    public async Task<IEnumerable<DocumentChunk>> RetrieveChunksAsync(string query, int topK = 5, CancellationToken ct = default)
+    {
+        var chunks = await vectorRepository.RetrieveChunksAsync(query, topK, ct);
+
+        return await dbRepository.GetByIdsAsync([.. chunks.Select(x => x.Id)]);
     }
 
     private List<DocumentChunk> SplitPageText(string text, int pageNumber)

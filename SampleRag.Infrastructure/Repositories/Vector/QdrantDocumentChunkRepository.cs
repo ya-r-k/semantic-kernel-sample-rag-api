@@ -13,20 +13,20 @@ public class QdrantDocumentChunkRepository(
     VectorStore vectorStore,
     VectorDbSettings settings) : IVectorRepository<DocumentChunk>
 {
-    private readonly VectorStoreCollection<Guid, DocumentChunk> vectorCollection = 
+    private readonly VectorStoreCollection<Guid, DocumentChunk> vectorCollection =
         vectorStore.GetCollection<Guid, DocumentChunk>("document-chunks", new VectorStoreCollectionDefinition
         {
             EmbeddingGenerator = embeddingGenerator,
             Properties =
             [
                 new VectorStoreKeyProperty("Id", typeof(Guid)),
-                new VectorStoreDataProperty("Text", typeof(int)),
-                new VectorStoreVectorProperty("Vector", typeof(ReadOnlyMemory<float>), dimensions: 1024) 
-                { 
+                //new VectorStoreDataProperty("ScopeId", typeof(Guid)),
+                new VectorStoreVectorProperty("Vector", typeof(ReadOnlyMemory<float>), dimensions: 1024)
+                {
                     DistanceFunction = DistanceFunction.CosineSimilarity,
                     IndexKind = IndexKind.Hnsw,
                 },
-            ]
+            ],
         });
 
     public async Task UpsertChunksAsync(DocumentChunk[] chunks, CancellationToken ct = default)
@@ -52,14 +52,15 @@ public class QdrantDocumentChunkRepository(
             new DocumentChunk
             {
                 Text = query,
-            }
+            },
         ], cancellationToken: ct);
 
-        var result = await vectorCollection.SearchAsync(new DocumentChunk
-        {
-            Text = query,
-            Vector = queryEmbedding[0].Vector,
-        }, topK, cancellationToken: ct).ToListAsync(cancellationToken: ct);
+        var result = await vectorCollection.SearchAsync(
+            new DocumentChunk
+            {
+                Text = query,
+                Vector = queryEmbedding[0].Vector,
+            }, topK, cancellationToken: ct).ToListAsync(cancellationToken: ct);
 
         return [.. result.Select(x => x.Record)];
     }
@@ -71,7 +72,7 @@ public class QdrantDocumentChunkRepository(
             new DocumentChunk
             {
                 Text = query,
-            }
+            },
         ], cancellationToken: ct);
 
         var result = await vectorCollection.SearchAsync(new DocumentChunk
@@ -88,7 +89,7 @@ public class QdrantDocumentChunkRepository(
 
     public async Task RemoveByAsync(Guid documentId, CancellationToken ct = default)
     {
-        using var qdrantClient = new QdrantClient(settings.Url);
+        using var qdrantClient = new QdrantClient(new Uri(settings.Url));
 
         var filter = new Filter();
         filter.Must.Add(new Condition()
@@ -99,10 +100,20 @@ public class QdrantDocumentChunkRepository(
                 Match = new Match()
                 {
                     Keyword = documentId.ToString(),
-                }
+                },
             },
         });
 
         await qdrantClient.DeleteAsync("document-chunks", filter, cancellationToken: ct);
+    }
+
+    public async Task ClearAsync(CancellationToken ct = default)
+    {
+        using var qdrantClient = new QdrantClient(new Uri(settings.Url));
+
+        var oldCollection = await qdrantClient.GetCollectionInfoAsync("document-chunks", ct);
+        var vectorParams = oldCollection.Config.Params.VectorsConfig.Params;
+
+        await qdrantClient.RecreateCollectionAsync("document-chunks", vectorParams, cancellationToken: ct);
     }
 }

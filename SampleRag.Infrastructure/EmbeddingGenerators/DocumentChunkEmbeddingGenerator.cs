@@ -6,7 +6,7 @@ namespace SampleRag.Infrastructure.EmbeddingGenerators;
 public class DocumentChunkEmbeddingGenerator(
     IEmbeddingGenerator<string, Embedding<float>> innerGenerator) : IEmbeddingGenerator<DocumentChunk, Embedding<float>>
 {
-    private const int MaxBatchSize = 5;
+    private const int MaxBatchSize = 100;
 
     public async Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(IEnumerable<DocumentChunk> values, EmbeddingGenerationOptions? options = null, CancellationToken cancellationToken = default)
     {
@@ -17,7 +17,7 @@ public class DocumentChunkEmbeddingGenerator(
         foreach (var batch in batches)
         {
             generatedEmbeddings.AddRange(await innerGenerator.GenerateAsync(
-                texts,
+                batch,
                 options,
                 cancellationToken));
         }

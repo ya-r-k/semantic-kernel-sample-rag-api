@@ -2,7 +2,6 @@ using Mapster;
 using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
-using SampleRag.Domain.Models;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Application.Services;
@@ -30,7 +29,7 @@ public class KnowledgeScopeService(
 
     public async Task<IEnumerable<KnowledgeScope>> AddAsync(IEnumerable<CreateScopeRequest> items, CancellationToken ct = default)
     {
-        var scopes = items.Adapt<KnowledgeScope>();
+        var scopes = items.Adapt<KnowledgeScope[]>();
 
         return await scopeRepository.AddAsync(scopes);
     }

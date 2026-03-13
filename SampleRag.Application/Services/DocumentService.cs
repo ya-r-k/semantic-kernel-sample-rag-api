@@ -7,6 +7,7 @@ using SampleRag.Domain.RequestModels;
 namespace SampleRag.Application.Services;
 
 public class DocumentService(
+    IDocumentChunkService documentChunkService,
     IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository,
     IFileRepository fileRepository) : IDocumentService
 {
@@ -30,6 +31,12 @@ public class DocumentService(
     public async Task<IEnumerable<Document>> GetByIdsAsync(params Guid[] ids)
     {
         return await documentsRepository.GetByIdsAsync(ids);
+    }
+
+    public async Task RemoveAllChunksAsync(CancellationToken ct = default)
+    {
+        await documentsRepository.SetFieldValueAsync(x => x.IsChunked, false);
+        await documentChunkService.RemoveAllAsync(ct);
     }
 
     public Task RemoveByIdsAsync(params Guid[] ids)

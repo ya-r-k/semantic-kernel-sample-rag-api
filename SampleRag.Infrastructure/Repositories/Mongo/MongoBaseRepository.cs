@@ -5,23 +5,23 @@ using SampleRag.Domain.Models.Abstractions;
 
 namespace SampleRag.Infrastructure.Repositories.Mongo;
 
-public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<Guid, TModel>
-    where TModel : IEntity<Guid>
+public class MongoBaseRepository<TEntity>(IMongoDatabase database) : IRepository<Guid, TEntity>
+    where TEntity : IEntity<Guid>
 {
-    protected readonly IMongoCollection<TModel> collection = database.GetCollection<TModel>(typeof(TModel).Name, new MongoCollectionSettings
+    protected readonly IMongoCollection<TEntity> collection = database.GetCollection<TEntity>(typeof(TEntity).Name, new MongoCollectionSettings
     {
         AssignIdOnInsert = true,
     });
 
-    public async Task<IEnumerable<TModel>> AddAsync(TModel[] items)
+    public async Task<IEnumerable<TEntity>> AddAsync(TEntity[] items, CancellationToken ct = default)
     {
-        var addedItems = new List<TModel>(items);
+        var addedItems = new List<TEntity>(items);
 
         try
         {
-            await collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = false });
+            await collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = false }, ct);
         }
-        catch (MongoBulkWriteException<TModel> ex)
+        catch (MongoBulkWriteException<TEntity> ex)
         {
             addedItems = [.. addedItems.Except(ex.WriteErrors.Select(err => items[err.Index]))];
         }
@@ -29,22 +29,31 @@ public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<
         return addedItems;
     }
 
-    public async Task UpdateAsync(TModel[] items)
+    public async Task UpdateAsync(TEntity[] items, CancellationToken ct = default)
     {
         var bulkOps = items.Select(item =>
-            new ReplaceOneModel<TModel>(
-                Builders<TModel>.Filter.Eq(e => e.Id, item.Id),
+            new ReplaceOneModel<TEntity>(
+                Builders<TEntity>.Filter.Eq(e => e.Id, item.Id),
                 item
             )).ToList();
 
-        await collection.BulkWriteAsync(bulkOps);
+        await collection.BulkWriteAsync(bulkOps, cancellationToken: ct);
     }
 
-    public async Task<IEnumerable<TModel>> GetBatchByAsync(Expression<Func<TModel, bool>>? predicate, int? batchSize)
+    public async Task SetFieldValueAsync<T>(Expression<Func<TEntity, T>> fieldSelector, T value)
+        where T : unmanaged
     {
-        var sortDefinition = Builders<TModel>.Sort.Ascending("_id");
-        var filterBuilder = Builders<TModel>.Filter;
-        var filter = Builders<TModel>.Filter.Empty;
+        var filter = Builders<TEntity>.Filter.Empty;
+        var update = Builders<TEntity>.Update.Set(fieldSelector, value);
+
+        await collection.UpdateManyAsync(filter, update);
+    }
+
+    public async Task<IEnumerable<TEntity>> GetBatchByAsync(Expression<Func<TEntity, bool>>? predicate, int? batchSize, CancellationToken ct = default)
+    {
+        var sortDefinition = Builders<TEntity>.Sort.Ascending("_id");
+        var filterBuilder = Builders<TEntity>.Filter;
+        var filter = Builders<TEntity>.Filter.Empty;
 
         if (predicate != null)
         {
@@ -58,20 +67,25 @@ public class MongoBaseRepository<TModel>(IMongoDatabase database) : IRepository<
             query = query.Limit(batchSize.Value);
         }
 
-        return await query.ToListAsync();
+        return await query.ToListAsync(cancellationToken: ct);
     }
 
-    public async Task<IEnumerable<TModel>> GetByIdsAsync(params Guid[] ids)
+    public async Task<IEnumerable<TEntity>> GetByIdsAsync(Guid[] ids, CancellationToken ct = default)
     {
-        var filter = Builders<TModel>.Filter.In(x => x.Id, ids);
+        var filter = Builders<TEntity>.Filter.In(x => x.Id, ids);
 
-        return await collection.Find(filter).ToListAsync();
+        return await collection.Find(filter).ToListAsync(cancellationToken: ct);
     }
 
-    public async Task RemoveByIdsAsync(params Guid[] ids)
+    public async Task RemoveByIdsAsync(Guid[] ids, CancellationToken ct = default)
     {
-        var filter = Builders<TModel>.Filter.In(x => x.Id, ids);
+        var filter = Builders<TEntity>.Filter.In(x => x.Id, ids);
 
-        await collection.DeleteManyAsync(filter);
+        await collection.DeleteManyAsync(filter, ct);
+    }
+
+    public async Task ClearAsync(CancellationToken ct = default)
+    {
+        await collection.Database.DropCollectionAsync(typeof(TEntity).Name, ct);
     }
 }

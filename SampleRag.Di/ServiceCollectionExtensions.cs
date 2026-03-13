@@ -1,19 +1,20 @@
 using Mapster;
-using MapsterMapper;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
+using Quartz;
 using SampleRag.Application.Factories;
+using SampleRag.Application.Jobs;
 using SampleRag.Application.Plugins;
 using SampleRag.Application.Services;
 using SampleRag.Domain.Entities.Db;
@@ -35,10 +36,6 @@ public static class ServiceCollectionExtensions
 {
     public static void ConfigureDependencies(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
-        var config = TypeAdapterConfig.GlobalSettings;
-        services.AddSingleton(config);
-        services.AddScoped<IMapper, ServiceMapper>();
-
         services.AddTransient<IDataGenerator, SemanticKernelDataGenerator>();
 
         services.AddTransient<IDocumentChunkService, DocumentChunkService>();
@@ -51,19 +48,15 @@ public static class ServiceCollectionExtensions
         var dbSettings = configuration.GetSection(nameof(DbSettings)).Get<DbSettings>();
         if (dbSettings is not null)
         {
-            // Program.cs — ДО создания MongoClient!
-            BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
-            BsonClassMap.RegisterClassMap<ApiDocument>(cm =>
-            {
-                cm.AutoMap();
-                cm.MapProperty(x => x.Vector).SetShouldSerializeMethod(_ => false);
-            });
-            BsonClassMap.RegisterClassMap<DocumentChunk>(cm =>
-            {
-                cm.AutoMap();
-                cm.MapProperty(x => x.Vector).SetShouldSerializeMethod(_ => false);
-            });
-            services.AddSingleton(new MongoClient(dbSettings.ConnectionString).GetDatabase(dbSettings.DatabaseName));
+            services.ConfigureMongoDb(dbSettings);
+            services.ConfigureQuartzJobs(dbSettings);
+        }
+
+        var jobsSettings = configuration.GetSection(nameof(DocumentsJobsSettings)).Get<DocumentsJobsSettings>();
+
+        if (jobsSettings is not null)
+        {
+            services.AddSingleton(jobsSettings);
         }
 
         services.AddTransient<IFilterRepository<Guid, DocumentChunk, GetDocumentChunksByModel>, DocumentChunkRepository>();
@@ -76,6 +69,44 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IVectorRepository<DocumentChunk>, QdrantDocumentChunkRepository>();
 
         services.ConfigureFileAccessLocalDependencies(environment);
+    }
+
+    public static void ConfigureMongoDb(this IServiceCollection services, DbSettings dbSettings)
+    {
+        BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+        BsonClassMap.RegisterClassMap<ApiDocument>(cm =>
+        {
+            cm.AutoMap();
+            cm.MapProperty(x => x.Vector).SetShouldSerializeMethod(_ => false);
+        });
+        BsonClassMap.RegisterClassMap<DocumentChunk>(cm =>
+        {
+            cm.AutoMap();
+            cm.MapProperty(x => x.Vector).SetShouldSerializeMethod(_ => false);
+        });
+        services.AddSingleton(new MongoClient(dbSettings.ConnectionString).GetDatabase(dbSettings.DatabaseName));
+    }
+
+    public static void ConfigureQuartzJobs(this IServiceCollection services, DbSettings dbSettings)
+    {
+        services.AddQuartz(q =>
+        {
+            q.AddJob<DocumentChunkingJob>(options => options.WithIdentity("chunk-documents"));
+            q.AddTrigger(options => options
+                .ForJob("chunk-documents")
+                .WithIdentity("chunk-documents-trigger")
+                .WithCronSchedule("0 0/5 11-23,0-7 * * ?")
+                .WithDescription("Чанкинг документов каждые 30 сек с 21:00 до 08:00"));
+
+            q.AddJob<ChunkVectorizationJob>(options => options.WithIdentity("vectorize-chunks"));
+            q.AddTrigger(options => options
+                .ForJob("vectorize-chunks")
+                .WithIdentity("vectorize-chunks-trigger")
+                .WithCronSchedule("0 0/2 11-23,0-7 * * ?")
+                .WithDescription("Ночное задание каждые 2 минуты"));
+        });
+
+        services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
     }
 
     public static void ConfigureFileAccessLocalDependencies(this IServiceCollection services, IWebHostEnvironment environment)
@@ -134,7 +165,7 @@ public static class ServiceCollectionExtensions
             .AddQdrantCollection<Guid, ApiDocument>("documents")
             .AddQdrantCollection<Guid, KnowledgeScope>("knowledge-groups");
 
-        _ = Task.Run(() => EnsureCollectionsExistsAsync(qdrantClient, vectorDbSettings));
+        EnsureCollectionsExistsAsync(qdrantClient, vectorDbSettings).Wait();
     }
 
     public static async Task EnsureCollectionsExistsAsync(this QdrantClient qdrantClient, VectorDbSettings vectorDbSettings)

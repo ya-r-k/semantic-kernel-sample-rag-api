@@ -32,6 +32,6 @@ public class DocumentChunkRepository(IMongoDatabase database) : MongoBaseReposit
             .Sort(sortDefinition)
             .Limit(model.BatchSize);
 
-        return await collection.Find(filter).ToListAsync();
+        return await query.ToListAsync();
     }
 }

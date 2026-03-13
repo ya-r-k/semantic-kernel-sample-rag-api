@@ -1,11 +1,14 @@
 ﻿using Quartz;
 using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Models.Configs;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Application.Jobs;
 
+[DisallowConcurrentExecution]
 public class ChunkVectorizationJob(
+    DocumentsJobsSettings settings,
     IFilterRepository<Guid, DocumentChunk, GetDocumentChunksByModel> dbRepository,
     IVectorRepository<DocumentChunk> vectorRepository) : IJob
 {
@@ -13,17 +16,20 @@ public class ChunkVectorizationJob(
     {
         var chunks = await dbRepository.GetBatchByAsync(new GetDocumentChunksByModel
         {
-            BatchSize = 100,
+            BatchSize = settings.ChunksBatchSize,
             IsVectorized = false,
         });
 
-        await vectorRepository.UpsertChunksAsync([.. chunks]);
-
-        foreach (var chunk in chunks)
+        if (chunks.Any())
         {
-            chunk.IsVectorized = true;
-        }
+            await vectorRepository.UpsertChunksAsync([.. chunks]);
 
-        await dbRepository.UpdateAsync([.. chunks]);
+            foreach (var chunk in chunks)
+            {
+                chunk.IsVectorized = true;
+            }
+
+            await dbRepository.UpdateAsync([.. chunks]);
+        }
     }
 }

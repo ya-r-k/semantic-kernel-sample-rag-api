@@ -7,26 +7,26 @@ namespace SampleRag.Infrastructure.Repositories.Mongo;
 
 public class ChatRepository(IMongoDatabase database) : MongoBaseRepository<Chat>(database), IFilterRepository<Guid, Chat, GetChatsByModel>
 {
-    public async Task<IEnumerable<Chat>> GetBatchByAsync(GetChatsByModel model)
+    public async Task<IEnumerable<Chat>> GetBatchByAsync(GetChatsByModel filterModel)
     {
         var sortDefinition = Builders<Chat>.Sort.Ascending("_id");
         var filterBuilder = Builders<Chat>.Filter;
         var filter = Builders<Chat>.Filter.Empty;
 
-        if (model.LastId.HasValue)
+        if (filterModel.LastId.HasValue)
         {
-            filter &= filterBuilder.Where(x => x.Id > model.LastId.Value);
+            filter &= filterBuilder.Where(x => x.Id > filterModel.LastId.Value);
         }
 
-        if (model.ScopeId.HasValue)
+        if (filterModel.ScopeId.HasValue)
         {
-            filter &= filterBuilder.Where(x => x.ScopeId == model.ScopeId.Value);
+            filter &= filterBuilder.Where(x => x.ScopeId == filterModel.ScopeId.Value);
         }
 
         var query = collection.Find(filter)
             .Sort(sortDefinition)
-            .Limit(model.BatchSize);
+            .Limit(filterModel.BatchSize);
 
-        return await collection.Find(filter).ToListAsync();
+        return await query.ToListAsync();
     }
 }

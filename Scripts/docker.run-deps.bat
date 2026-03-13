@@ -12,5 +12,12 @@ REM Запуск Ollama
 docker run -d --gpus=all  --name ollama -p 11434:11434 -v "D:\Development Data\Docker Volumes\ai-models-files":/root/.ollama --cpus=8 --cpu-shares=1024 ollama/ollama:0.17.6
 docker update --cpu-shares=512 mongodb qdrant
 
+docker exec -it ollama ollama pull qwen3.5:0.8b 
+docker exec -it ollama ollama pull qwen3:4b 
+docker exec -it ollama ollama pull mxbai-embed-large:335m
+
+@echo Список загруженных ИИ-моделей в Ollama:
+docker exec -it ollama ollama list 
+
 @echo Скрипт завершен. Проверьте контейнеры командой: docker ps 
 set /p DUMMY=Press Enter to continue...

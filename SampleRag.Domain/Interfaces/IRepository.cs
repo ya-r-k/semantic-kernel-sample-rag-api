@@ -1,20 +1,24 @@
 ﻿using SampleRag.Domain.Models.Abstractions;
-using SampleRag.Domain.RequestModels;
 using System.Linq.Expressions;
 
 namespace SampleRag.Domain.Interfaces;
 
-public interface IRepository<TId, TModel>
+public interface IRepository<TId, TEntity>
     where TId : unmanaged
-    where TModel : IEntity<TId>
+    where TEntity : IEntity<TId>
 {
-    Task<IEnumerable<TModel>> AddAsync(params TModel[] items);
+    Task<IEnumerable<TEntity>> AddAsync(TEntity[] items, CancellationToken ct = default);
 
-    Task UpdateAsync(params TModel[] items);
+    Task UpdateAsync(TEntity[] items, CancellationToken ct = default);
 
-    Task RemoveByIdsAsync(params TId[] ids);
+    Task SetFieldValueAsync<T>(Expression<Func<TEntity, T>> fieldSelector, T value)
+        where T : unmanaged;
 
-    Task<IEnumerable<TModel>> GetByIdsAsync(params TId[] ids);
+    Task RemoveByIdsAsync(TId[] ids, CancellationToken ct = default);
 
-    Task<IEnumerable<TModel>> GetBatchByAsync(Expression<Func<TModel, bool>>? predicate, int? batchSize);
+    Task ClearAsync(CancellationToken ct = default);
+
+    Task<IEnumerable<TEntity>> GetByIdsAsync(TId[] ids, CancellationToken ct = default);
+
+    Task<IEnumerable<TEntity>> GetBatchByAsync(Expression<Func<TEntity, bool>>? predicate, int? batchSize, CancellationToken ct = default);
 }

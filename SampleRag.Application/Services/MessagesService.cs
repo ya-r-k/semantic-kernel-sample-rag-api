@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+using System.Text;
 using Mapster;
 using SampleRag.Domain.Entities.Db;
 using SampleRag.Domain.Interfaces;
@@ -17,12 +17,12 @@ public class MessagesService(
     public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest request, string userId)
     {
         var userMessage = request.Adapt<Message>();
-
         if (userMessage.ChatId.Equals(Guid.Empty))
         {
             var chat = userMessage.Adapt<Chat>();
             await chatService.AddAsync(chat);
 
+            userMessage.ChatId = chat.Id;
             yield return chat.Adapt<MessagePartResponse>();
         }
 
@@ -40,37 +40,46 @@ public class MessagesService(
     private async IAsyncEnumerable<MessagePartResponse> GenerateAiMessage(Message userMessage)
     {
         userMessage.CreatedAt = DateTime.UtcNow;
-        var messagesHistory = await messagesRepository.GetBatchByAsync(x => x.ChatId.Equals(userMessage.ChatId), 30);
+        var messagesHistory = await messagesRepository.GetBatchByAsync(new GetMessagesByModel
+        {
+            ChatId = userMessage.ChatId,
+            BatchSize = 30,
+        });
+
+        var prevGenerationStep = GenerationStep.Unknown;
 
         var aiMessage = new Message
         {
             AiGenerated = true,
             ChatId = userMessage.ChatId,
-            Text = string.Empty,
         };
 
-        var prevGenerationStep = GenerationStep.Unknown;
-
+        var aiTextBuilder = new StringBuilder();
         await foreach (var part in dataGenerator.GenerateStreamingData(messagesHistory.Append(userMessage), "naive-rag"))
         {
             if (part.Step is GenerationStep.ResponseMessage)
             {
-                aiMessage.Text += part.Text;
+                aiTextBuilder.Append(part.Text);
+            }
+            else if (part.Step is GenerationStep.ToolResult)
+            {
+                aiMessage.SourceReferences = part.ToolsResults.Adapt<SourceReference[]>();
             }
 
-            if (part.Step == prevGenerationStep)
+            /*if (part.Step == prevGenerationStep)
             {
                 part.Step = GenerationStep.Unknown;
             }
             else
             {
                 prevGenerationStep = part.Step;
-            }
+            }*/
 
             yield return part;
         }
 
         aiMessage.CreatedAt = DateTime.UtcNow;
+        aiMessage.Text = aiTextBuilder.ToString();
 
         await messagesRepository.AddAsync([userMessage, aiMessage]);
 
