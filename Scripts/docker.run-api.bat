@@ -12,7 +12,13 @@ REM Пример: docker build -t sampleragapi ../SampleRag.API
 docker build -t sampleragapi -f ../SampleRag.API/Dockerfile ..
 
 REM Запустить контейнер API
-docker run -d --name sampleragapi --network samplerag-net -p 5000:80 ^
+docker run -d --name sampleragapi --network samplerag-net -p 5234:8080 ^
+  -v "%cd%\..\SampleRag.API\wwwroot\assets:/app/wwwroot/assets" ^
+  -e ASPNETCORE_ENVIRONMENT=Development ^
+  -e ASPNETCORE_URLS=http://+:8080 ^
+  -e DOTNET_USE_POLLING_FILE_WATCHER=true ^
+  -e DOTNET_WATCH_RELOAD_ON_CHANGE=true ^
+  -e ASPNETCORE_DETAILEDERRORS=true ^
   -e DbSettings__ConnectionString=mongodb://mongodb:27017 ^
   -e VectorDbSettings__Url=http://qdrant:6334 ^
   -e GenAiProviderSettings__Url=http://ollama:11434 ^
