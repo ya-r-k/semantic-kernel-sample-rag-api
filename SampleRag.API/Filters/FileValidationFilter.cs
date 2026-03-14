@@ -1,4 +1,4 @@
-﻿using SampleRag.Domain.RequestModels;
+using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.API.Filters;
 

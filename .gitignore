@@ -20,12 +20,11 @@
 **/.vs
 **/bin
 **/obj
-**/.vs
 *.ini
 *.cache
 *.log
 *.tmp
-
+*.csproj.user
 
 # Bencharks artifacts
 **/BenchmarkDotNet.Artifacts

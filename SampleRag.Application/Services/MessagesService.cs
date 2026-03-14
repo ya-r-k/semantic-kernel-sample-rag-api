@@ -1,6 +1,6 @@
 using System.Text;
 using Mapster;
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
@@ -14,19 +14,30 @@ public class MessagesService(
     IChatService chatService,
     IFilterRepository<Guid, Message, GetMessagesByModel> messagesRepository) : IMessagesService
 {
-    public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest request, string userId)
+    public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string userId)
     {
-        var userMessage = request.Adapt<Message>();
-        if (userMessage.ChatId.Equals(Guid.Empty))
-        {
-            var chat = userMessage.Adapt<Chat>();
-            await chatService.AddAsync(chat);
+        var userMessage = message.Adapt<Message>();
 
-            userMessage.ChatId = chat.Id;
-            yield return chat.Adapt<MessagePartResponse>();
+        if (message.ChatId != Guid.Empty)
+        {
+            var newChat = new Chat
+            {
+                Name = string.Concat(message.Text.Take(80)),
+                OwnerIds = [userId],
+            };
+
+            var createdChats = await chatService.AddAsync(newChat);
+            var createdChat = createdChats.FirstOrDefault();
+            if (createdChat is null)
+            {
+                yield break;
+            }
+
+            userMessage.ChatId = createdChat.Id;
+            yield return createdChat.Adapt<MessagePartResponse>();
         }
 
-        await foreach (var part in GenerateAiMessage(userMessage))
+        await foreach (var part in this.GenerateAiMessage(userMessage))
         {
             yield return part;
         }
@@ -45,8 +56,6 @@ public class MessagesService(
             ChatId = userMessage.ChatId,
             BatchSize = 30,
         });
-
-        var prevGenerationStep = GenerationStep.Unknown;
 
         var aiMessage = new Message
         {

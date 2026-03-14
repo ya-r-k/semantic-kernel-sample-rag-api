@@ -1,5 +1,5 @@
-﻿using SampleRag.Domain.Models.Abstractions;
 using System.Linq.Expressions;
+using SampleRag.Domain.Models.Abstractions;
 
 namespace SampleRag.Domain.Interfaces;
 

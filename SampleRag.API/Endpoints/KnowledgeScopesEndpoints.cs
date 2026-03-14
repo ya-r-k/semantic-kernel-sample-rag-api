@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;

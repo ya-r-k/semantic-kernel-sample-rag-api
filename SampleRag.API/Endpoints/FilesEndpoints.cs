@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.Domain.Interfaces;
 
@@ -19,7 +19,8 @@ public static class FilesEndpoints
 
             return Results.File(stream, enableRangeProcessing: true, contentType: "application/pdf");
         })
-            //.RequireAuthorization()
+
+            // .RequireAuthorization()
             .Produces<FileStreamResult>(StatusCodes.Status200OK)
             .Produces<FileStreamResult>(StatusCodes.Status206PartialContent)
             .Produces<FileStreamResult>(StatusCodes.Status401Unauthorized)

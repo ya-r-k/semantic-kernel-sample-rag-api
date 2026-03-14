@@ -1,4 +1,4 @@
-﻿namespace SampleRag.Application;
+namespace SampleRag.Application;
 
 public static class PromptsConsts
 {

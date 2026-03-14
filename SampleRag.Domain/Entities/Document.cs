@@ -1,6 +1,6 @@
 using SampleRag.Domain.Models.Abstractions;
 
-namespace SampleRag.Domain.Entities.Db;
+namespace SampleRag.Domain.Entities;
 
 public class Document : IVectorEntity<Guid, float>, IEntity<Guid>, IEntityWithScopeId
 {

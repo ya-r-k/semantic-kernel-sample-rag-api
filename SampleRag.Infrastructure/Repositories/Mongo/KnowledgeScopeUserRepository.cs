@@ -1,5 +1,5 @@
 using MongoDB.Driver;
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.RequestModels;
 
@@ -16,7 +16,7 @@ public class KnowledgeScopeUserRepository(IMongoDatabase database) : IKnowledgeS
             Builders<KnowledgeScopeUser>.Filter.Eq(x => x.ScopeId, scopeId),
             Builders<KnowledgeScopeUser>.Filter.Eq(x => x.UserId, userId));
 
-        return await collection.CountDocumentsAsync(filter, cancellationToken: ct) > 0;
+        return await this.collection.CountDocumentsAsync(filter, cancellationToken: ct) > 0;
     }
 
     public async Task<IEnumerable<KnowledgeScopeUser>> AddAsync(KnowledgeScopeUser[] items, CancellationToken ct = default)
@@ -25,7 +25,7 @@ public class KnowledgeScopeUserRepository(IMongoDatabase database) : IKnowledgeS
 
         try
         {
-            await collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = false }, ct);
+            await this.collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = false }, ct);
         }
         catch (MongoBulkWriteException<KnowledgeScopeUser> ex)
         {
@@ -41,7 +41,7 @@ public class KnowledgeScopeUserRepository(IMongoDatabase database) : IKnowledgeS
             Builders<KnowledgeScopeUser>.Filter.Eq(x => x.ScopeId, scopeId),
             Builders<KnowledgeScopeUser>.Filter.In(x => x.UserId, usersId));
 
-        await collection.DeleteManyAsync(filter, ct);
+        await this.collection.DeleteManyAsync(filter, ct);
     }
 
     public async Task<IEnumerable<Guid>> GetScopeIdsForUserAsync(GetBatchByModel filterModel, string userId, CancellationToken ct = default)
@@ -57,7 +57,7 @@ public class KnowledgeScopeUserRepository(IMongoDatabase database) : IKnowledgeS
             filter &= filterBuilder.Where(x => x.Id > filterModel.LastId.Value);
         }
 
-        var query = collection.Find(filter)
+        var query = this.collection.Find(filter)
             .Sort(sortDefinition)
             .Limit(filterModel.BatchSize);
 

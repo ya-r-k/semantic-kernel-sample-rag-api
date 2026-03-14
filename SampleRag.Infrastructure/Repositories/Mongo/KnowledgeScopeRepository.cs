@@ -1,5 +1,5 @@
-﻿using MongoDB.Driver;
-using SampleRag.Domain.Entities.Db;
+using MongoDB.Driver;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.RequestModels;
 
@@ -18,7 +18,7 @@ public class KnowledgeScopeRepository(IMongoDatabase database) : MongoBaseReposi
             filter &= builder.Where(x => x.Id > filterModel.LastId.Value);
         }
 
-        var query = collection.Find(filter)
+        var query = this.collection.Find(filter)
             .Sort(sortDefinition)
             .Limit(filterModel.BatchSize);
 

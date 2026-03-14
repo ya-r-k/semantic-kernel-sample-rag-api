@@ -1,4 +1,4 @@
-﻿namespace SampleRag.Domain.RequestModels;
+namespace SampleRag.Domain.RequestModels;
 
 public class GetBatchByModel
 {

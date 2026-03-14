@@ -1,3 +1,4 @@
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -8,7 +9,6 @@ using SampleRag.API.Middleware;
 using SampleRag.Di;
 using SampleRag.Di.Mapping;
 using SampleRag.Domain.Models.Configs;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
@@ -106,5 +106,6 @@ app.MapMessagesEndpoints();
 app.MapDocumentsEndpoints();
 app.MapFilesEndpoints();
 app.MapKnowledgeScopesEndpoints();
+app.MapFeedbacksEndpoints();
 
 app.Run();

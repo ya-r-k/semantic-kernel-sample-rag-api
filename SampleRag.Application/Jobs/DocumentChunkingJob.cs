@@ -1,4 +1,4 @@
-﻿using Quartz;
+using Quartz;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models.Configs;
 using SampleRag.Domain.RequestModels;

@@ -8,16 +8,12 @@ namespace SampleRag.API.Middleware;
 /// <summary>
 /// Development-only auth handler. When JWT is not configured, authenticates all requests as dev admin.
 /// </summary>
-public class DevAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+public class DevAuthHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    public DevAuthHandler(
-        IOptionsMonitor<AuthenticationSchemeOptions> options,
-        ILoggerFactory logger,
-        UrlEncoder encoder)
-        : base(options, logger, encoder)
-    {
-    }
-
+    /// <inheritdoc/>
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var claims = new[]
@@ -26,9 +22,9 @@ public class DevAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
             new Claim(ClaimTypes.Name, "dev-user"),
             new Claim(ClaimTypes.Role, "Administrator"),
         };
-        var identity = new ClaimsIdentity(claims, Scheme.Name);
+        var identity = new ClaimsIdentity(claims, this.Scheme.Name);
         var principal = new ClaimsPrincipal(identity);
-        var ticket = new AuthenticationTicket(principal, Scheme.Name);
+        var ticket = new AuthenticationTicket(principal, this.Scheme.Name);
         return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }

@@ -1,4 +1,4 @@
-﻿using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Models.Configs;
 
 namespace SampleRag.Infrastructure.Repositories.Files;

@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
 using SampleRag.Domain.RequestModels;
@@ -22,7 +22,8 @@ public static class MessagesEndpoints
         {
             return Results.Ok(await messageService.GetBatchByAsync(model));
         })
-            //.RequireAuthorization()
+
+            // .RequireAuthorization()
             .Produces<Message>(StatusCodes.Status200OK)
             .Accepts<GetMessagesByModel>("application/json");
     }

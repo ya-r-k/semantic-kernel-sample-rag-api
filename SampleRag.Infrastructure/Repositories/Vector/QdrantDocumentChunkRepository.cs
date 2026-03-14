@@ -2,7 +2,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Models.Configs;
 
@@ -20,7 +20,8 @@ public class QdrantDocumentChunkRepository(
             Properties =
             [
                 new VectorStoreKeyProperty("Id", typeof(Guid)),
-                //new VectorStoreDataProperty("ScopeId", typeof(Guid)),
+
+                // new VectorStoreDataProperty("ScopeId", typeof(Guid)),
                 new VectorStoreVectorProperty("Vector", typeof(ReadOnlyMemory<float>), dimensions: 1024)
                 {
                     DistanceFunction = DistanceFunction.CosineSimilarity,
@@ -42,7 +43,7 @@ public class QdrantDocumentChunkRepository(
             chunks[i].Vector = embeddings[i].Vector;
         }
 
-        await vectorCollection.UpsertAsync(chunks, ct);
+        await this.vectorCollection.UpsertAsync(chunks, ct);
     }
 
     public async Task<IEnumerable<DocumentChunk>> RetrieveChunksAsync(string query, int topK = 5, CancellationToken ct = default)
@@ -55,7 +56,7 @@ public class QdrantDocumentChunkRepository(
             },
         ], cancellationToken: ct);
 
-        var result = await vectorCollection.SearchAsync(
+        var result = await this.vectorCollection.SearchAsync(
             new DocumentChunk
             {
                 Text = query,
@@ -75,11 +76,12 @@ public class QdrantDocumentChunkRepository(
             },
         ], cancellationToken: ct);
 
-        var result = await vectorCollection.SearchAsync(new DocumentChunk
-        {
-            Text = query,
-            Vector = queryEmbedding[0].Vector,
-        }, topK * 3, cancellationToken: ct).ToListAsync(cancellationToken: ct);
+        var result = await this.vectorCollection.SearchAsync(
+            new DocumentChunk
+            {
+                Text = query,
+                Vector = queryEmbedding[0].Vector,
+            }, topK * 3, cancellationToken: ct).ToListAsync(cancellationToken: ct);
 
         return [.. result
             .Select(x => x.Record)

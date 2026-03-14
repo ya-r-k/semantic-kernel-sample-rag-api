@@ -1,4 +1,4 @@
-﻿using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel;
 using SampleRag.Domain.Interfaces.Factories;
 
 namespace SampleRag.Application.Factories;

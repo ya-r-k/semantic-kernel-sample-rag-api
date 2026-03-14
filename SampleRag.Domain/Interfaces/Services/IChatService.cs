@@ -1,4 +1,4 @@
-﻿using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Domain.Interfaces.Services;

@@ -17,7 +17,7 @@ using SampleRag.Application.Factories;
 using SampleRag.Application.Jobs;
 using SampleRag.Application.Plugins;
 using SampleRag.Application.Services;
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Factories;
 using SampleRag.Domain.Interfaces.Services;
@@ -28,7 +28,7 @@ using SampleRag.Infrastructure.EmbeddingGenerators;
 using SampleRag.Infrastructure.Repositories.Files;
 using SampleRag.Infrastructure.Repositories.Mongo;
 using SampleRag.Infrastructure.Repositories.Vector;
-using ApiDocument = SampleRag.Domain.Entities.Db.Document;
+using ApiDocument = SampleRag.Domain.Entities.Document;
 
 namespace SampleRag.Di;
 
@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IMessagesService, MessagesService>();
         services.AddTransient<IChatService, ChatService>();
         services.AddTransient<IKnowledgeScopeService, KnowledgeScopeService>();
+        services.AddTransient<IFeedbackService, FeedbackService>();
 
         // Configure IMongoDatabase
         var dbSettings = configuration.GetSection(nameof(DbSettings)).Get<DbSettings>();
@@ -53,7 +54,6 @@ public static class ServiceCollectionExtensions
         }
 
         var jobsSettings = configuration.GetSection(nameof(DocumentsJobsSettings)).Get<DocumentsJobsSettings>();
-
         if (jobsSettings is not null)
         {
             services.AddSingleton(jobsSettings);
@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IFilterRepository<Guid, Message, GetMessagesByModel>, MessageRepository>();
         services.AddTransient<IFilterRepository<Guid, Chat, GetChatsByModel>, ChatRepository>();
         services.AddTransient<IFilterRepository<Guid, KnowledgeScope, GetBatchByModel>, KnowledgeScopeRepository>();
+        services.AddTransient<IFilterRepository<Guid, Feedback, GetFeedbackByModel>, FeedbackRepository>();
         services.AddTransient<IKnowledgeScopeUserRepository, KnowledgeScopeUserRepository>();
 
         services.AddTransient<IVectorRepository<DocumentChunk>, QdrantDocumentChunkRepository>();
@@ -124,8 +125,8 @@ public static class ServiceCollectionExtensions
         var vectorDbSettings = configuration.GetSection(nameof(VectorDbSettings)).Get<VectorDbSettings>();
         var lmConfig = configuration.GetSection(nameof(GenAiProviderSettings)).Get<GenAiProviderSettings>();
 
-        services.ConfigureKernel(lmConfig ?? new());
-        services.ConfigureQdrant(vectorDbSettings ?? new());
+        services.ConfigureKernel(lmConfig ?? new ());
+        services.ConfigureQdrant(vectorDbSettings ?? new ());
     }
 
     public static void ConfigureKernel(this IServiceCollection services, GenAiProviderSettings lmConfig)
@@ -144,8 +145,7 @@ public static class ServiceCollectionExtensions
         services.ConfigurePromptExecutionSettings();
 
         // Configures Semantic Memory
-        //services.AddKernelMemory<MemoryServerless>();
-
+        // services.AddKernelMemory<MemoryServerless>();
         services.AddSingleton<IEmbeddingGenerator<DocumentChunk, Embedding<float>>, DocumentChunkEmbeddingGenerator>();
     }
 
@@ -155,7 +155,8 @@ public static class ServiceCollectionExtensions
 
         var qdrantClient = new QdrantClient(new Uri(vectorDbSettings!.Url));
 
-        services.AddQdrantVectorStore(_ => qdrantClient,
+        services.AddQdrantVectorStore(
+            _ => qdrantClient,
             sp => new QdrantVectorStoreOptions
             {
                 EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>(),
@@ -210,7 +211,7 @@ public static class ServiceCollectionExtensions
                 ["naive-rag"] = new PromptExecutionSettings
                 {
                     FunctionChoiceBehavior = FunctionChoiceBehavior.Required([retrievalPlugin]),
-                }
+                },
             };
 
             return new PromptExecutionSettingsFactory(executionSettings);
@@ -245,7 +246,7 @@ public static class ServiceCollectionExtensions
                 Product = new ProductQuantization()
                 {
                     Compression = CompressionRatio.X4,
-                }
+                },
             },
             _ => throw new NotImplementedException(),
         };

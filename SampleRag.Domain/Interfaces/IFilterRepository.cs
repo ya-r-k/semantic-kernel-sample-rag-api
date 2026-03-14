@@ -1,4 +1,4 @@
-﻿using SampleRag.Domain.Models.Abstractions;
+using SampleRag.Domain.Models.Abstractions;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Domain.Interfaces;

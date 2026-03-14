@@ -1,42 +1,37 @@
-# Удалите строку ниже, если вы хотите наследовать параметры .editorconfig из каталогов, расположенных выше в иерархии
+# Удалите строку ниже, если вы хотите наследовать параметры .editorconfig из каталогов выше в иерархии
 root = true
 
-# Файлы C#
-[*.cs]
-
-#### Основные параметры EditorConfig ####
-
-# Отступы и интервалы
-indent_size = 4
+# Core EditorConfig Options
+[*]
 indent_style = space
+indent_size = 4
 tab_width = 4
-
-# Предпочтения для новых строк
 end_of_line = crlf
-insert_final_newline = false
-
-#### Действия кода .NET ####
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+max_line_length = 80
+file_header_template =
 
 # Члены типа
 dotnet_hide_advanced_members = false
 dotnet_member_insertion_location = with_other_members_of_the_same_kind
 dotnet_property_generation_behavior = prefer_throwing_properties
-
-# Поиск символов
 dotnet_search_reference_assemblies = true
+
+#### Действия кода .NET ####
 
 #### Рекомендации по написанию кода .NET ####
 
 # Упорядочение Using
 dotnet_separate_import_directive_groups = false
-dotnet_sort_system_directives_first = false
-file_header_template = unset
+dotnet_sort_system_directives_first = true
 
 # Предпочтения для this. и Me.
-dotnet_style_qualification_for_event = false
-dotnet_style_qualification_for_field = false
-dotnet_style_qualification_for_method = false
-dotnet_style_qualification_for_property = false
+dotnet_style_qualification_for_event = false:suggestion
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
 
 # Параметры использования ключевых слов языка и типов BCL
 dotnet_style_predefined_type_for_locals_parameters_members = true
@@ -88,9 +83,9 @@ dotnet_style_allow_statement_immediately_after_block_experimental = true
 #### Рекомендации по написанию кода C# ####
 
 # Предпочтения var
-csharp_style_var_elsewhere = false
-csharp_style_var_for_built_in_types = false
-csharp_style_var_when_type_is_apparent = false
+csharp_style_var_elsewhere = true:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
 
 # Члены, заданные выражениями
 csharp_style_expression_bodied_accessors = true
@@ -224,24 +219,58 @@ dotnet_naming_rule.non_field_members_should_be_pascal_case.style = pascal_case
 
 dotnet_naming_symbols.interface.applicable_kinds = interface
 dotnet_naming_symbols.interface.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
-dotnet_naming_symbols.interface.required_modifiers = 
+dotnet_naming_symbols.interface.required_modifiers =
 
 dotnet_naming_symbols.types.applicable_kinds = class, struct, interface, enum
 dotnet_naming_symbols.types.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
-dotnet_naming_symbols.types.required_modifiers = 
+dotnet_naming_symbols.types.required_modifiers =
 
 dotnet_naming_symbols.non_field_members.applicable_kinds = property, event, method
 dotnet_naming_symbols.non_field_members.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
-dotnet_naming_symbols.non_field_members.required_modifiers = 
+dotnet_naming_symbols.non_field_members.required_modifiers =
 
 # Стили именования
 
-dotnet_naming_style.pascal_case.required_prefix = 
-dotnet_naming_style.pascal_case.required_suffix = 
-dotnet_naming_style.pascal_case.word_separator = 
+dotnet_naming_style.pascal_case.required_prefix =
+dotnet_naming_style.pascal_case.required_suffix =
+dotnet_naming_style.pascal_case.word_separator =
 dotnet_naming_style.pascal_case.capitalization = pascal_case
 
 dotnet_naming_style.begins_with_i.required_prefix = I
-dotnet_naming_style.begins_with_i.required_suffix = 
-dotnet_naming_style.begins_with_i.word_separator = 
+dotnet_naming_style.begins_with_i.required_suffix =
+dotnet_naming_style.begins_with_i.word_separator =
 dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+# Visual Basic
+visual_basic_preferred_modifier_order = Partial, Default, Private, Protected, Public, Friend, NotOverridable, Overridable, MustOverride, Overloads, Overrides, MustInherit, NotInheritable, Static, Shared, Shadows, ReadOnly, WriteOnly, Dim, Const, WithEvents, Widening, Narrowing, Custom, Async
+visual_basic_style_unused_variable_expression_statement_preference = unused_local_variable
+visual_basic_style_unused_value_assignment_preference = unused_local_variable
+visual_basic_style_prefer_isnot_expression = true
+visual_basic_style_prefer_simplified_object_creation = true
+
+# SA1633: File should have header
+dotnet_diagnostic.SA1633.severity = none
+# SA1200: Using directives should be placed correctly
+dotnet_diagnostic.SA1200.severity = none
+
+# SA1009: Closing parenthesis should be spaced correctly
+dotnet_diagnostic.SA1009.severity = none
+
+# CA1051: Не объявляйте видимые поля экземпляров
+dotnet_diagnostic.CA1051.severity = none
+
+# SA1401: Fields should be private
+dotnet_diagnostic.SA1401.severity = none
+
+# SA1010: Opening square brackets should be spaced correctly
+dotnet_diagnostic.SA1010.severity = none
+
+# SA1011: Closing square brackets should be spaced correctly
+dotnet_diagnostic.SA1011.severity = none
+
+# IDE0003: 'this.' can be removed
+dotnet_diagnostic.IDE0003.severity = none
+dotnet_diagnostic.IDE0009.severity = silent
+
+# IDE0055: Fix formatting
+dotnet_diagnostic.IDE0055.severity = none

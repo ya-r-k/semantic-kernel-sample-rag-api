@@ -96,9 +96,9 @@ description: 'Task list for Demo RAG API feature implementation'
 
 **Independent Test**: POST /api/messages with scopeId + text creates new chat with generated title and returns chat + message; POST /api/chats/{id}/owners adds owner (caller must be owner).
 
-- [ ] T022 [US3] Implement "send message without chatId": accept scopeId + text, create chat with generated title, add user message, run RAG, return new chat and message in SampleRag.API/Endpoints/MessagesEndpoints.cs and SampleRag.Application/Services
-- [ ] T023 [US3] Implement chat title generation from first message (LLM or truncation) in SampleRag.Application/Services
-- [ ] T024 [US3] Implement POST /api/chats/{id}/owners (add owner; only existing owners) in SampleRag.API/Endpoints/ChatsEndpoints.cs
+- [X] T022 [US3] Implement "send message without chatId": accept scopeId + text, create chat with generated title, add user message, run RAG, return new chat and message in SampleRag.API/Endpoints/MessagesEndpoints.cs and SampleRag.Application/Services
+- [X] T023 [US3] Implement chat title generation from first message (LLM or truncation) in SampleRag.Application/Services
+- [X] T024 [US3] Implement POST /api/chats/{id}/owners (add owner; only existing owners) in SampleRag.API/Endpoints/ChatsEndpoints.cs
 
 **Checkpoint**: User Stories 1–3 complete — multi-owner and auto-created chats with generated titles
 
@@ -110,9 +110,9 @@ description: 'Task list for Demo RAG API feature implementation'
 
 **Independent Test**: POST /api/messages/{messageId}/feedback with isLike true/false records feedback; resubmit updates (last wins).
 
-- [ ] T025 [P] [US4] Add Feedback model in SampleRag.Domain/Models; add IFeedbackRepository in SampleRag.Domain/Interfaces and implement in SampleRag.Infrastructure/Repositories (MongoDB collection Feedbacks)
-- [ ] T026 [US4] Implement POST /api/messages/{messageId}/feedback (upsert like/dislike by messageId and caller userId) in SampleRag.API/Endpoints/MessagesEndpoints.cs and SampleRag.Application/Services
-- [ ] T027 [US4] Implement GET /api/messages/{messageId}/feedback (optional) in SampleRag.API/Endpoints/MessagesEndpoints.cs
+- [X] T025 [P] [US4] Add Feedback model in SampleRag.Domain/Models; use as dependency IRepository  implementation in SampleRag.Infrastructure/Repositories (MongoDB collection Feedbacks)
+- [X] T026 [US4] Implement POST /api/messages/{messageId}/feedback (upsert like/dislike by messageId and caller userId) in SampleRag.API/Endpoints/MessagesEndpoints.cs and SampleRag.Application/Services
+- [X] T027 [US4] Implement GET /api/messages/{messageId}/feedback (optional) in SampleRag.API/Endpoints/MessagesEndpoints.cs
 
 **Checkpoint**: All user stories complete — feedback recorded and retrievable
 
@@ -122,7 +122,7 @@ description: 'Task list for Demo RAG API feature implementation'
 
 **Purpose**: Bug fixes and validation
 
-- [ ] T028 Fix DataGenerator streaming condition if inverted in SampleRag.Application/Services/DataGenerator.cs: ensure the condition that controls when to stream (e.g. when to use streaming vs non-streaming response) is correct; fix if it is reversed (streaming when it should not, or vice versa)
+- [x] T028 Fix DataGenerator streaming condition if inverted in SampleRag.Application/Services/DataGenerator.cs: ensure the condition that controls when to stream (e.g. when to use streaming vs non-streaming response) is correct; fix if it is reversed (streaming when it should not, or vice versa)
 - [ ] T029 Run quickstart.md validation: create scope, upload PDF, create chat, send message, add owner, submit feedback; verify non-admin upload 403 and scope access 403; verify FR-009 (API-only file access): ensure uploads under wwwroot/assets/documents are not served via static files middleware—file access only via API; validate SC-001 (upload confirmation within a few seconds) manually under normal load
 
 ---

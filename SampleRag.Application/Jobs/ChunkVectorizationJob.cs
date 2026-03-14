@@ -1,5 +1,5 @@
-﻿using Quartz;
-using SampleRag.Domain.Entities.Db;
+using Quartz;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Models.Configs;
 using SampleRag.Domain.RequestModels;

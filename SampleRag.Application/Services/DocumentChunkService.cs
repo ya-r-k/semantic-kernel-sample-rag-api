@@ -1,4 +1,4 @@
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
@@ -44,7 +44,7 @@ public class DocumentChunkService(
                 continue;
             }
 
-            var pageChunks = SplitPageText(text, page);
+            var pageChunks = this.SplitPageText(text, page);
             foreach (var chunk in pageChunks)
             {
                 chunk.DocumentId = data.Id;

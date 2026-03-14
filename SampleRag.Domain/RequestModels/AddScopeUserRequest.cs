@@ -1,6 +1,6 @@
-﻿namespace SampleRag.Domain.RequestModels;
+namespace SampleRag.Domain.RequestModels;
 
 public class AddScopeUserRequest
 {
-    public string[] UsersId { get; set; }
+    public string[]? UsersId { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿namespace SampleRag.Domain.Models.Abstractions;
+namespace SampleRag.Domain.Models.Abstractions;
 
 public interface IEntityWithScopeId
 {

@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using MongoDB.Driver;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Models.Abstractions;
@@ -19,7 +19,7 @@ public class MongoBaseRepository<TEntity>(IMongoDatabase database) : IRepository
 
         try
         {
-            await collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = false }, ct);
+            await this.collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = true }, ct);
         }
         catch (MongoBulkWriteException<TEntity> ex)
         {
@@ -34,10 +34,9 @@ public class MongoBaseRepository<TEntity>(IMongoDatabase database) : IRepository
         var bulkOps = items.Select(item =>
             new ReplaceOneModel<TEntity>(
                 Builders<TEntity>.Filter.Eq(e => e.Id, item.Id),
-                item
-            )).ToList();
+                item)).ToList();
 
-        await collection.BulkWriteAsync(bulkOps, cancellationToken: ct);
+        await this.collection.BulkWriteAsync(bulkOps, cancellationToken: ct);
     }
 
     public async Task SetFieldValueAsync<T>(Expression<Func<TEntity, T>> fieldSelector, T value)
@@ -46,7 +45,7 @@ public class MongoBaseRepository<TEntity>(IMongoDatabase database) : IRepository
         var filter = Builders<TEntity>.Filter.Empty;
         var update = Builders<TEntity>.Update.Set(fieldSelector, value);
 
-        await collection.UpdateManyAsync(filter, update);
+        await this.collection.UpdateManyAsync(filter, update);
     }
 
     public async Task<IEnumerable<TEntity>> GetBatchByAsync(Expression<Func<TEntity, bool>>? predicate, int? batchSize, CancellationToken ct = default)
@@ -60,7 +59,7 @@ public class MongoBaseRepository<TEntity>(IMongoDatabase database) : IRepository
             filter &= filterBuilder.Where(predicate);
         }
 
-        var query = collection.Find(filter).Sort(sortDefinition);
+        var query = this.collection.Find(filter).Sort(sortDefinition);
 
         if (batchSize.HasValue)
         {
@@ -74,18 +73,18 @@ public class MongoBaseRepository<TEntity>(IMongoDatabase database) : IRepository
     {
         var filter = Builders<TEntity>.Filter.In(x => x.Id, ids);
 
-        return await collection.Find(filter).ToListAsync(cancellationToken: ct);
+        return await this.collection.Find(filter).ToListAsync(cancellationToken: ct);
     }
 
     public async Task RemoveByIdsAsync(Guid[] ids, CancellationToken ct = default)
     {
         var filter = Builders<TEntity>.Filter.In(x => x.Id, ids);
 
-        await collection.DeleteManyAsync(filter, ct);
+        await this.collection.DeleteManyAsync(filter, ct);
     }
 
     public async Task ClearAsync(CancellationToken ct = default)
     {
-        await collection.Database.DropCollectionAsync(typeof(TEntity).Name, ct);
+        await this.collection.Database.DropCollectionAsync(typeof(TEntity).Name, ct);
     }
 }

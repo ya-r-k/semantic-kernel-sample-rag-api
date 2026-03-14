@@ -18,7 +18,7 @@ public class MessagePartResponse
     public Guid? NewChatId { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ToolCallResponse[] ToolsCalls { get; set; }
+    public ToolCallResponse[]? ToolsCalls { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ToolResultResponse[]? ToolsResults { get; set; }

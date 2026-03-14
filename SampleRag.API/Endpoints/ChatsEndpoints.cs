@@ -2,8 +2,7 @@ using System.Security.Claims;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.API.Filters;
-using SampleRag.Domain.Entities.Db;
-using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
 
@@ -38,6 +37,49 @@ public static class ChatsEndpoints
         })
             .RequireAuthorization()
             .Produces<Chat>(StatusCodes.Status200OK);
+
+        group.MapPost("{id:guid}/owners", async (Guid id, [FromBody] AddChatOwnerRequest request, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
+        {
+            var callerUserId = claims.FindFirstValue(ClaimTypes.NameIdentifier) ?? claims.FindFirstValue("sub");
+            if (string.IsNullOrEmpty(callerUserId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var chats = await chatService.GetByIdsAsync(id);
+            var chat = chats.FirstOrDefault();
+            if (chat is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (chat.OwnerIds is null || !chat.OwnerIds.Contains(callerUserId))
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            if (string.IsNullOrWhiteSpace(request.UserId))
+            {
+                return Results.BadRequest("UserId is required.");
+            }
+
+            if (chat.OwnerIds.Contains(request.UserId))
+            {
+                return Results.NoContent();
+            }
+
+            chat.OwnerIds = [.. chat.OwnerIds, request.UserId];
+            await chatService.UpdateAsync(chat);
+
+            return Results.NoContent();
+        })
+            .RequireAuthorization()
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Accepts<AddChatOwnerRequest>("application/json");
 
         group.MapPatch("{id:guid}/name/generate", async (Guid id, IChatService chatService, CancellationToken ct) =>
         {

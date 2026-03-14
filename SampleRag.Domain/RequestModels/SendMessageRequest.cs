@@ -1,8 +1,8 @@
-﻿namespace SampleRag.Domain.RequestModels;
+namespace SampleRag.Domain.RequestModels;
 
 public class SendMessageRequest
 {
-    public Guid? ChatId { get; set; }
+    public Guid ChatId { get; set; }
 
-    public string Text { get; set; }
+    public string? Text { get; set; }
 }

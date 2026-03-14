@@ -1,5 +1,5 @@
-﻿using MongoDB.Driver;
-using SampleRag.Domain.Entities.Db;
+using MongoDB.Driver;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.RequestModels;
 
@@ -23,7 +23,7 @@ public class ChatRepository(IMongoDatabase database) : MongoBaseRepository<Chat>
             filter &= filterBuilder.Where(x => x.ScopeId == filterModel.ScopeId.Value);
         }
 
-        var query = collection.Find(filter)
+        var query = this.collection.Find(filter)
             .Sort(sortDefinition)
             .Limit(filterModel.BatchSize);
 

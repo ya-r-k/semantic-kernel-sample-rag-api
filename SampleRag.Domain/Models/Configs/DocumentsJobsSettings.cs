@@ -1,4 +1,4 @@
-﻿namespace SampleRag.Domain.Models.Configs;
+namespace SampleRag.Domain.Models.Configs;
 
 public class DocumentsJobsSettings
 {

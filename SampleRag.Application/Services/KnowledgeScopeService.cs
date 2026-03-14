@@ -1,5 +1,5 @@
 using Mapster;
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
@@ -24,14 +24,14 @@ public class KnowledgeScopeService(
     {
         var scopesIds = await scopeUserRepository.GetScopeIdsForUserAsync(filterModel, userId, ct);
 
-        return await scopeRepository.GetByIdsAsync([.. scopesIds]);
+        return await scopeRepository.GetByIdsAsync([.. scopesIds], ct);
     }
 
     public async Task<IEnumerable<KnowledgeScope>> AddAsync(IEnumerable<CreateScopeRequest> items, CancellationToken ct = default)
     {
         var scopes = items.Adapt<KnowledgeScope[]>();
 
-        return await scopeRepository.AddAsync(scopes);
+        return await scopeRepository.AddAsync(scopes, ct);
     }
 
     public async Task AddUsersAsync(Guid id, string[] usersIds, CancellationToken ct)
@@ -47,6 +47,6 @@ public class KnowledgeScopeService(
 
     public async Task RemoveByIds(Guid[] ids, CancellationToken ct = default)
     {
-        await scopeRepository.RemoveByIdsAsync(ids);
+        await scopeRepository.RemoveByIdsAsync(ids, ct);
     }
 }

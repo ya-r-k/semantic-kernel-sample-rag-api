@@ -1,13 +1,13 @@
-﻿using Mapster;
+using System.Security.Claims;
+using Mapster;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using SampleRag.Application.Plugins;
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Models;
 using SampleRag.Domain.Models.Enums;
 using SampleRag.Domain.RequestModels;
-using System.Security.Claims;
 using OllamaChatResponseStream = OllamaSharp.Models.Chat.ChatResponseStream;
 using OllamaFunction = OllamaSharp.Models.Chat.Message.Function;
 using OllamaToolCall = OllamaSharp.Models.Chat.Message.ToolCall;

@@ -92,6 +92,10 @@ A user can indicate whether a system answer was helpful by submitting a like (co
 - What happens when a non-owner attempts to add an owner to a chat? System rejects the request; only existing owners can add new owners.
 - What happens when a user tries to create a chat in a scope they are not allowed to use? System rejects the request; the system enforces scope access when creating chats.
 - How does the system handle duplicate or near-duplicate feedback (e.g. multiple likes from the same user for the same answer)? Last feedback wins or feedback is idempotent per user and answer.
+- What happens when the vector store or model provider is unavailable or times out? System returns a clear, non-ambiguous error and does not fabricate an answer from empty or partial context.
+- What happens after a document is deleted or removed from a scope? Future answers MUST NOT retrieve or cite that document; existing stored messages and historical source references remain unchanged.
+- How are duplicate or overlapping pieces of content across documents in a scope handled? The ranking and deduplication strategy is left to implementation; the spec only requires that cited sources correspond to real stored documents and pages.
+- What is the maximum number or size of retrievable chunks per question? This is intentionally not fixed by the spec; implementations MAY choose reasonable limits, provided that when relevant content exists at least one appropriate source reference can be returned.
 
 ## Requirements *(mandatory)*
 
@@ -99,7 +103,7 @@ A user can indicate whether a system answer was helpful by submitting a like (co
 
 - **FR-001**: System MUST allow only administrators to upload files; non-administrator upload attempts MUST be rejected.
 - **FR-001b**: System MUST provide an explicit scope API so that scopes can be created or managed (e.g. by administrators); the system MUST enforce which users can use which scope when creating chats, sending questions, or uploading files.
-- **FR-002**: System MUST accept PDF file uploads and store them in a scope (group/tenant/category) so they can be used only when answering questions in that scope.
+- **FR-002**: System MUST accept PDF file uploads and store them in a scope (group/tenant/category) so they can be used only when answering questions in that scope. The system MUST ensure that accepted uploads are processed so they become available for retrieval within their scope; documents that fail processing MUST NOT be used when answering questions.
 - **FR-003**: System MUST enforce a maximum file size for uploads (per project constraints).
 - **FR-004**: System MUST answer user questions in a chat using only stored documents within that chat’s scope and return both the answer text and a list of sources (document and page references) used to form the answer.
 - **FR-005**: System MUST support chats that can have multiple owners (users who can send and receive messages in the chat); the creating user is the initial owner. Each chat MUST be bound to exactly one scope at creation.
@@ -120,7 +124,7 @@ Functional requirements (FR-001 through FR-009) and their numbering are binding 
 ### Key Entities
 
 - **Scope (group/tenant/category)**: A container that groups documents and defines which users can use it for Q&A, uploads, and chat creation; scopes are created or managed via the explicit scope API (e.g. by admins); the system enforces scope access for creating chats, asking questions, and uploading files.
-- **Document/File**: An uploaded PDF; has identity, storage reference, scope membership, and may have extracted text and page-level structure for retrieval and source citation.
+- **Document/File**: An uploaded PDF; has identity, storage reference, scope membership, and extracted text organised into numbered pages (page-level structure) so that retrieval and source citation can always be expressed as document identifier plus page number (or range).
 - **Chat**: A conversation container; has an identity, a title (possibly system-generated), a single scope (bound at creation), and a set of owners; the creator is the initial owner; additional owners are added via the add-owner/invite API; all RAG answers in the chat use only documents in the chat’s scope.
 - **Message**: A single user or system message in a chat; has content, sender (user or system), and ordering within the chat.
 - **Source reference**: A reference to a part of a document (e.g. document identifier and page number or range) used to ground an answer.
@@ -132,9 +136,9 @@ Functional requirements (FR-001 through FR-009) and their numbering are binding 
 - “Administrator” and “user” are roles or attributes supplied in or derived from that token when processing requests.
 - Generated chat titles are derived from the first user message (e.g. summarised or truncated) and need only be human-readable, not unique.
 - Documents are scoped (group/tenant/category). Scopes are created and managed via the API; the system enforces which users can use which scope. Each chat is bound to one scope at creation; the system uses only documents in that chat’s scope when producing answers for questions in that chat.
-
 - File upload size limit and file access follow project constraints: maximum single file size as defined by project governance (20 MB); file access is only through the API (no direct public access to stored files).
 - Implementation structure, validation approach, and persistence patterns follow the project's Clean Architecture and governance (constitution and project overview); all behaviour above is exposed via the API only.
+- RAG behaviour is constrained to a single model and vector stack: Ollama is the only provider for both text generation and embeddings, and Qdrant is the only vector store for document chunks, as mandated by the project constitution. Semantic Kernel (including any “kernel memory”) is used only as an orchestration layer and MUST NOT bypass scope isolation or replace the scoped vector store as the source of documents for RAG answers.
 
 ## Success Criteria *(mandatory)*
 

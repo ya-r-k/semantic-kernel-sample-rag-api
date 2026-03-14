@@ -1,4 +1,4 @@
-﻿namespace SampleRag.Domain.Models.Enums;
+namespace SampleRag.Domain.Models.Enums;
 
 public enum GenerationStep
 {

@@ -1,6 +1,6 @@
-﻿using SampleRag.Domain.Models.Abstractions;
+using SampleRag.Domain.Models.Abstractions;
 
-namespace SampleRag.Domain.Entities.Db;
+namespace SampleRag.Domain.Entities;
 
 public class DocumentChunk : IVectorEntity<Guid, float>, IEntity<Guid>
 {
@@ -14,7 +14,7 @@ public class DocumentChunk : IVectorEntity<Guid, float>, IEntity<Guid>
 
     public int? ChunkIndex { get; set; }
 
-    public string Text { get; set; }
+    public string? Text { get; set; }
 
     public bool IsVectorized { get; set; }
 

@@ -13,8 +13,8 @@ public class JwtSettings
     public bool RequireHttpsMetadata { get; set; } = true;
 
     /// <summary>
-    /// When true and Authority is set, JWT validation is enabled.
+    /// Gets a value indicating whether when true and Authority is set, JWT validation is enabled.
     /// When false or Authority is empty, auth is disabled (dev mode).
     /// </summary>
-    public bool Enabled => !string.IsNullOrWhiteSpace(Authority);
+    public bool Enabled => !string.IsNullOrWhiteSpace(this.Authority);
 }

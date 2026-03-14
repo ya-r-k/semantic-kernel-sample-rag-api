@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.API.Filters;
-using SampleRag.Application.Services;
-using SampleRag.Domain.Entities.Db;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
 
@@ -23,7 +22,8 @@ public static class DocumentsEndpoints
                 ? Results.Created($"/api/documents/{created.Id}", created)
                 : Results.StatusCode(StatusCodes.Status500InternalServerError);
         })
-            //.RequireAuthorization("RequireAdministrator")
+
+            // .RequireAuthorization("RequireAdministrator")
             .AddEndpointFilter<DocumentUploadValidationFilter>()
             .AddEndpointFilter<FileValidationFilter>()
             .Produces(StatusCodes.Status201Created)
@@ -35,7 +35,8 @@ public static class DocumentsEndpoints
         {
             return Results.Ok(await documentService.GetBatchByAsync(model));
         })
-            //.RequireAuthorization("RequireAdministrator")
+
+            // .RequireAuthorization("RequireAdministrator")
             .Produces<Document>(StatusCodes.Status200OK)
             .Accepts<GetDocumentsByModel>("application/json");
 
@@ -43,7 +44,8 @@ public static class DocumentsEndpoints
         {
             return Results.Ok(await documentService.GetByIdsAsync(ids));
         })
-            //.RequireAuthorization("RequireAdministrator")
+
+            // .RequireAuthorization("RequireAdministrator")
             .Produces<Document>(StatusCodes.Status200OK)
             .Accepts<Guid[]>("application/json");
 
@@ -53,7 +55,8 @@ public static class DocumentsEndpoints
 
             return Results.NoContent();
         })
-            //.RequireAuthorization("RequireAdministrator")
+
+            // .RequireAuthorization("RequireAdministrator")
             .Produces(StatusCodes.Status204NoContent);
 
         group.MapDelete("/chunks", async (IDocumentService documentService, CancellationToken ct) =>
@@ -62,7 +65,8 @@ public static class DocumentsEndpoints
 
             return Results.NoContent();
         })
-            //.RequireAuthorization("RequireAdministrator")
+
+            // .RequireAuthorization("RequireAdministrator")
             .Produces(StatusCodes.Status204NoContent);
 
         group.MapDelete("/chunks/embeddings", async (IDocumentChunkService documentChunkService, CancellationToken ct) =>
@@ -71,7 +75,8 @@ public static class DocumentsEndpoints
 
             return Results.NoContent();
         })
-            //.RequireAuthorization("RequireAdministrator")
+
+            // .RequireAuthorization("RequireAdministrator")
             .Produces(StatusCodes.Status204NoContent);
     }
 }

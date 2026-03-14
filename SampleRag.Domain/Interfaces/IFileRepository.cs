@@ -1,4 +1,4 @@
-﻿namespace SampleRag.Domain.Interfaces;
+namespace SampleRag.Domain.Interfaces;
 
 public interface IFileRepository
 {

@@ -1,6 +1,7 @@
-﻿namespace SampleRag.Domain.Models.Abstractions;
+namespace SampleRag.Domain.Models.Abstractions;
 
-public interface IEntity<TId> where TId: unmanaged
+public interface IEntity<TId>
+    where TId : unmanaged
 {
     TId Id { get; set; }
 }
