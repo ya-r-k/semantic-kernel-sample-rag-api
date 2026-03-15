@@ -83,7 +83,7 @@ The solution follows **Clean Architecture** (API → Di → Application + Infras
 **Layered flow**
 
 - **API** — Endpoints inject application services or repositories; return `Results.*`; stream `IAsyncEnumerable<MessagePart>` for chat. Validations (document upload, file size/type, scope access) are in **endpoint filters**.
-- **Application** — DocumentService, DocumentChunkService, MessagesService, KnowledgeScopeUserService; depend on `IRepository<Guid, T>`, `IVectorRepository<DocumentChunk>`, `IFileRepository`, `IDataGenerator`, Kernel. Services use **primary constructors**. Chats: create/list/delete are in **ChatsEndpoints** using `IRepository<Guid, Chat>` directly.
+- **Application** — DocumentService, DocumentChunkService, MessagesService, KnowledgeScopeUserService, ChatService; depend on `IRepository<Guid, T>`, `IVectorRepository<DocumentChunk>`, `IFileRepository`, `IDataGenerator`, Kernel. Services use **primary constructors**. Chats: create/list/delete/add-owner are in **ChatsEndpoints** using **IChatService**.
 - **Domain** — Entities (`Chat`, `Message`, `Document`, `DocumentChunk`, `KnowledgeScope`) implement `IEntity<Guid>`; vector models also `IVectorEntity<Guid, float>`. Interfaces for repositories and services in Domain.
 - **Infrastructure** — `MongoBaseRepository<T>` (primary constructor; protected `_collection`), `QdrantDocumentChunkRepository` (VectorStoreCollectionDefinition: Id, PageNumber, ChunkIndex, Vector 1024, CosineSimilarity, Hnsw), `LocalFileRepository`, embedding generators, `SemanticKernelDataGenerator`.
 
@@ -97,7 +97,7 @@ The solution follows **Clean Architecture** (API → Di → Application + Infras
 
 **Endpoint organization**
 
-- Static classes per resource: `ChatsEndpoints`, `MessagesEndpoints`, `DocumentsEndpoints`, `FilesEndpoints`, `KnowledgeScopesEndpoints` (route prefix `api/knowledgescopes`). Chats and Messages use `.RequireAuthorization()`; Chats and create-chat use `ScopeUserAccessFilter`; Documents use `DocumentUploadValidationFilter` and `FileValidationFilter`. Knowledge scope create/user management use `RequireAdministrator`.
+- Static classes per resource: `ChatsEndpoints`, `MessagesEndpoints`, `DocumentsEndpoints`, `FilesEndpoints`, `KnowledgeScopesEndpoints`, `FeedbacksEndpoints`. Route prefixes: `api/chats`, `api/messages`, `api/documents`, `api/files`, `api/knowledgescopes`, `api/feedbacks`. Chats and Messages use `.RequireAuthorization()`; Chats use `ScopeUserAccessFilter`; Documents use `DocumentUploadValidationFilter` and `FileValidationFilter`. Knowledge scope create/user management use `RequireAdministrator`. Document and Messages/filter auth are commented out in code.
 
 **Middleware**
 
@@ -113,17 +113,21 @@ The solution follows **Clean Architecture** (API → Di → Application + Infras
 
 **HTTP methods and REST usage**
 
-- **POST** `api/chats` — create chat (body: `CreateChatRequest`: Name, ScopeId, OwnerIds); 201 Created; `ScopeUserAccessFilter`.
-- **GET** `api/chats` — list with `batchSize`, `lastUsedIndex` (Guid cursor); 200 OK.
+- **POST** `api/chats` — create chat (body: `CreateChatRequest`: Name, ScopeId, OwnerIds?); 201 Created; `ScopeUserAccessFilter`.
+- **POST** `api/chats/filter` — list chats (body: `GetChatsByModel`: lastId, batchSize, scopeId?); 200 OK.
+- **POST** `api/chats/{id}/owners` — add owner (body: `AddChatOwnerRequest`: UserId); 204. **PATCH** `api/chats/{id}/name/generate` — not implemented.
 - **DELETE** `api/chats/{id}` — 204 No Content.
-- **POST** `api/messages` — send message; returns streaming `IAsyncEnumerable<MessagePart>`.
-- **POST** `api/documents` — upload document (body: `UploadDocumentRequestModel`); 201 Created; filters for validation and file rules.
+- **POST** `api/messages` — send message (body: `SendMessageRequest`: ChatId, Text); returns streaming `IAsyncEnumerable<MessagePartResponse>`.
+- **POST** `api/messages/filter` — list messages (body: `GetMessagesByModel`); 200 OK.
+- **POST** `api/documents` — upload document (body: `UploadDocumentRequestModel`: Name, ScopeId, File base64); 201 Created; filters for validation and file rules.
+- **POST** `api/documents/filter` — list documents; **POST** `api/documents/filter/ids` — by ids; **DELETE** `api/documents/{id}`, `api/documents/chunks`, `api/documents/chunks/embeddings`.
 - **GET** `api/files/assets/documents/{fileName}` — file download (PDF).
-- **POST** `api/knowledgescopes` — create scope (RequireAdministrator); **POST** `api/knowledgescopes/filter` — list with `GetBatchByModel`; **POST/DELETE** `.../users` for scope users.
+- **POST** `api/knowledgescopes` — create scope(s) (RequireAdministrator); **POST** `api/knowledgescopes/filter` — list with `GetBatchByModel`; **POST** `api/knowledgescopes/{id}/users`, **DELETE** `api/knowledgescopes/{id}/users/{userId}`.
+- **POST** `api/feedbacks` — submit feedback (body: `FeedbackRequest`: MessageId, IsLike); **POST** `api/feedbacks/filter` — list feedback.
 
 **Request/Response models**
 
-- Request DTOs in Domain: `UploadDocumentRequestModel` (Name, ScopeId, File with base64 Content + FileName), `SendMessageRequest`, `CreateChatRequest` (Name, ScopeId, OwnerIds), `CreateGroupRequest`, `GetBatchByModel`, `AddScopeUserRequest`. `CreateChatRequest` implements `IEntityWithScopeId` for `ScopeUserAccessFilter`.
+- Request DTOs in Domain: `UploadDocumentRequestModel` (Name, ScopeId, File with base64 Content + FileName), `SendMessageRequest` (ChatId, Text), `CreateChatRequest` (Name, ScopeId, OwnerIds?), `CreateScopeRequest` (Name, UsersIds), `GetBatchByModel` (LastId, BatchSize), `GetChatsByModel`, `GetDocumentsByModel`, `GetMessagesByModel`, `GetFeedbackByModel`, `AddScopeUserRequest` (UsersId?), `AddChatOwnerRequest` (UserId), `FeedbackRequest` (MessageId, IsLike). `CreateChatRequest` implements `IEntityWithScopeId` for `ScopeUserAccessFilter`.
 
 **File upload**
 
@@ -131,7 +135,7 @@ The solution follows **Clean Architecture** (API → Di → Application + Infras
 
 **Pagination / filtering**
 
-- Cursor-style: `batchSize` and optional `lastUsedIndex` (Guid for chats). Repository `GetBatchByAsync` with expression. No URL versioning or HATEOAS.
+- Cursor-style: filter models use `BatchSize` and optional `LastId` (Guid). List operations use POST `.../filter` with these models. No GET list endpoints. No URL versioning or HATEOAS.
 
 **Rate limiting**
 
@@ -188,22 +192,20 @@ The solution follows **Clean Architecture** (API → Di → Application + Infras
 
 ### 1. ChatsEndpoints + ScopeUserAccessFilter (API)
 
-Chat creation with scope access enforced by filter; repository injected directly.
+Chat create/list/delete/add-owner with scope access enforced by filter; **IChatService** injected.
 
 ```csharp
-group.MapPost("/", async ([FromBody] CreateChatRequest request, IRepository<Guid, Chat> chatRepository, ClaimsPrincipal user, CancellationToken ct) =>
+group.MapPost("/", async ([FromBody] CreateChatRequest request, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
 {
-    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub") ?? "unknown";
-    var ownerIds = request.OwnerIds?.Length > 0 ? request.OwnerIds : [userId];
-    var chat = new Chat { Name = request.Name, ScopeId = request.ScopeId, OwnerIds = ownerIds };
-    var result = await chatRepository.AddAsync(chat);
-    // ...
+    var chat = (request, claims).Adapt<Chat>();
+    var result = await chatService.AddAsync(chat);
+    // ... Results.Created
 })
     .RequireAuthorization()
     .AddEndpointFilter<ScopeUserAccessFilter>()
 ```
 
-**Purpose**: Create chat with optional owner list; scope access via `IKnowledgeScopeUserService.HasAccessAsync`. **Dependencies**: `IRepository<Guid, Chat>`, `ScopeUserAccessFilter` (uses `IEntityWithScopeId`).
+**Purpose**: Create chat with optional owner list; scope access via `IKnowledgeScopeUserService.HasAccessAsync`. List via POST `/filter` with `GetChatsByModel`; add owner via POST `{id}/owners` with `AddChatOwnerRequest`. **Dependencies**: `IChatService`, `ScopeUserAccessFilter` (uses `IEntityWithScopeId`).
 
 ---
 
@@ -327,7 +329,7 @@ _ = Task.Run(() => EnsureCollectionsExistsAsync(qdrantClient, vectorDbSettings))
 
 **Summary**
 
-SampleRag is a **Clean Architecture** ASP.NET Core Minimal API for a RAG demo: chats (create/list/delete via repository), messages (streaming LLM via Semantic Kernel + Ollama), document upload (base64 JSON → local disk + MongoDB), knowledge scopes with user association, and file download. Persistence: MongoDB and local files; vector store: Qdrant with startup collection ensure. **Validation is in endpoint filters**; models in Domain; vector entities implement `IVectorEntity`; Application/Infrastructure use primary constructors. Auth: JWT or Dev handler. **ChatService removed** — ChatsEndpoints use `IRepository<Guid, Chat>` directly. **Plugins** moved to `Application/Plugins/`. Rate limiter, SignalR hub, MediatR, and Quartz are configured or referenced but not fully wired. **RetrievalPlugin** currently returns mock data; vector retrieval exists in `QdrantDocumentChunkRepository.RetrieveChunksAsync(scopeId, query)`.
+SampleRag is a **Clean Architecture** ASP.NET Core Minimal API for a RAG demo: chats (create/list/delete/add-owner via **IChatService**), messages (streaming LLM via Semantic Kernel + Ollama), document upload (base64 JSON → local disk + MongoDB), knowledge scopes (api/knowledgescopes) with user association, feedback (api/feedbacks), and file download. Persistence: MongoDB and local files; vector store: Qdrant with startup collection ensure. **Validation is in endpoint filters**; models in Domain; vector entities implement `IVectorEntity`; Application/Infrastructure use primary constructors. Auth: JWT or Dev handler. List operations use **POST …/filter** with filter models (no GET list endpoints). **Plugins** in `Application/Plugins/`. Rate limiter, SignalR hub, MediatR, and Quartz are configured or referenced but not fully wired. **RetrievalPlugin** currently returns mock data; vector retrieval exists in `QdrantDocumentChunkRepository.RetrieveChunksAsync(scopeId, query)`.
 
 **Strengths**
 

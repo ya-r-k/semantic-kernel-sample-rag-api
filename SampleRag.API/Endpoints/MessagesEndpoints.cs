@@ -11,9 +11,12 @@ public static class MessagesEndpoints
 {
     public static void MapMessagesEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("api/messages").WithTags("Messages");
+        var group = routes.MapGroup("api/messages")
+            .WithTags("Messages")
+            .RequireAuthorization();
+
         group.MapPost("/", SendUserMessage)
-            .RequireAuthorization()
+            .RequireRateLimiting("send-message")
             .Produces<MessagePartResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status403Forbidden)
             .Accepts<SendMessageRequest>("application/json");
@@ -22,8 +25,6 @@ public static class MessagesEndpoints
         {
             return Results.Ok(await messageService.GetBatchByAsync(model));
         })
-
-            // .RequireAuthorization()
             .Produces<Message>(StatusCodes.Status200OK)
             .Accepts<GetMessagesByModel>("application/json");
     }

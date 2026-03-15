@@ -11,7 +11,9 @@ public static class FeedbacksEndpoints
 {
     public static void MapFeedbacksEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("api/feedbacks").WithTags("Feedbacks");
+        var group = routes.MapGroup("api/feedbacks")
+            .WithTags("Feedbacks")
+            .RequireAuthorization();
 
         group.MapPost("/", async ([FromBody] FeedbackRequest request, ClaimsPrincipal claims, IFeedbackService feedbackService, CancellationToken ct) =>
         {
@@ -20,7 +22,6 @@ public static class FeedbacksEndpoints
 
             return Results.NoContent();
         })
-            .RequireAuthorization()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status401Unauthorized)
             .Accepts<FeedbackRequest>("application/json");
@@ -29,7 +30,6 @@ public static class FeedbacksEndpoints
         {
             return Results.Ok(await feedbackService.GetFeedbackAsync(filterModel, ct));
         })
-            .RequireAuthorization()
             .Produces<IEnumerable<Feedback>>(StatusCodes.Status200OK);
     }
 }

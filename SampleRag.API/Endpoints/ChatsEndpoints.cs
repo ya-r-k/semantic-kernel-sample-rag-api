@@ -12,7 +12,10 @@ public static class ChatsEndpoints
 {
     public static void MapChatsEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("api/chats").WithTags("Chats");
+        var group = routes.MapGroup("api/chats")
+            .WithTags("Chats")
+            .RequireAuthorization();
+
         group.MapPost("/", async ([FromBody] CreateChatRequest request, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
         {
             var chat = (request, claims).Adapt<Chat>();
@@ -24,7 +27,6 @@ public static class ChatsEndpoints
                 ? Results.Created($"/api/chats/{created.Id}", created)
                 : Results.StatusCode(StatusCodes.Status500InternalServerError);
         })
-            .RequireAuthorization()
             .AddEndpointFilter<ScopeUserAccessFilter>()
             .Produces<Chat>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
@@ -35,7 +37,6 @@ public static class ChatsEndpoints
         {
             return Results.Ok(await chatService.GetBatchByAsync(model));
         })
-            .RequireAuthorization()
             .Produces<Chat>(StatusCodes.Status200OK);
 
         group.MapPost("{id:guid}/owners", async (Guid id, [FromBody] AddChatOwnerRequest request, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
@@ -73,7 +74,6 @@ public static class ChatsEndpoints
 
             return Results.NoContent();
         })
-            .RequireAuthorization()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -85,7 +85,6 @@ public static class ChatsEndpoints
         {
             throw new NotImplementedException();
         })
-            .RequireAuthorization()
             .Produces<Chat>(StatusCodes.Status204NoContent);
 
         group.MapDelete("{id:guid}", async (Guid id, IChatService chatService, CancellationToken ct) =>
@@ -94,7 +93,6 @@ public static class ChatsEndpoints
 
             return Results.NoContent();
         })
-            .RequireAuthorization()
             .Produces<Chat>(StatusCodes.Status204NoContent)
             .Accepts<Chat>("application/json");
     }

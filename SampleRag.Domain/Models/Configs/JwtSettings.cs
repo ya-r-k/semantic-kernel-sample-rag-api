@@ -8,13 +8,9 @@ public class JwtSettings
 
     public string? Issuer { get; set; }
 
+    public string SigningKey { get; set; }
+
     public string? MetadataAddress { get; set; }
 
     public bool RequireHttpsMetadata { get; set; } = true;
-
-    /// <summary>
-    /// Gets a value indicating whether when true and Authority is set, JWT validation is enabled.
-    /// When false or Authority is empty, auth is disabled (dev mode).
-    /// </summary>
-    public bool Enabled => !string.IsNullOrWhiteSpace(this.Authority);
 }

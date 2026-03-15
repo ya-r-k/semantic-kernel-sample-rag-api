@@ -8,5 +8,5 @@ public class CreateChatRequest : IEntityWithScopeId
 
     public Guid ScopeId { get; set; }
 
-    public string[]? OwnerIds { get; set; }
+    public string[] OwnerIds { get; set; } = null!;
 }

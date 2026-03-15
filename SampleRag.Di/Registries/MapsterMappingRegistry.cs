@@ -12,11 +12,11 @@ using OllamaChatResponseStream = OllamaSharp.Models.Chat.ChatResponseStream;
 using OllamaFunction = OllamaSharp.Models.Chat.Message.Function;
 using OllamaToolCall = OllamaSharp.Models.Chat.Message.ToolCall;
 
-namespace SampleRag.Di.Mapping;
+namespace SampleRag.Di.Registries;
 
-public static class MappingServiceCollectionExtensions
+public static class MapsterMappingRegistry
 {
-    public static IServiceCollection ConfigureMapster(this IServiceCollection services)
+    public static IServiceCollection ConfigureMapsterSettings(this IServiceCollection services)
     {
         TypeAdapterConfig.GlobalSettings.NewConfig<Message, ChatMessageContent>()
             .Map(dest => dest.Content, src => src.Text)
@@ -64,13 +64,13 @@ public static class MappingServiceCollectionExtensions
             .Map(dest => dest.NewChatId, src => src.Id)
             .Compile();
 
-        TypeAdapterConfig.GlobalSettings.NewConfig<(CreateChatRequest request, ClaimsPrincipal claims), Chat>()
-            .MapWith(src => src.request.Adapt<Chat>())
-            .Map(dest => dest.OwnerIds, src => GetOwnerIds(src.request, src.claims))
+        TypeAdapterConfig.GlobalSettings.NewConfig<ClaimsPrincipal, string>()
+            .MapWith(src => GetUserId(src))
             .Compile();
 
-        TypeAdapterConfig.GlobalSettings.NewConfig<ClaimsPrincipal, string>()
-            .MapWith(src => src.FindFirstValue(ClaimTypes.NameIdentifier) ?? src.FindFirstValue("sub"))
+        TypeAdapterConfig.GlobalSettings.NewConfig<(CreateChatRequest request, ClaimsPrincipal claims), Chat>()
+            .MapWith(src => src.request.Adapt<Chat>())
+            .Map(dest => dest.OwnerIds, src => src.request.OwnerIds.Append(src.claims.Adapt<string>()))
             .Compile();
 
         TypeAdapterConfig.GlobalSettings.NewConfig<(CreateScopeRequest scope, ClaimsPrincipal claims), CreateScopeRequest>()
@@ -94,11 +94,10 @@ public static class MappingServiceCollectionExtensions
         return src.FirstOrDefault(x => x.Tool == AiTool.InternalDocumentData)?.Value.Adapt<SourceReference[]>() ?? [];
     }
 
-    private static string[] GetOwnerIds(CreateChatRequest request, ClaimsPrincipal claims)
+    private static string GetUserId(ClaimsPrincipal claims)
     {
-        var userId = claims.FindFirstValue(ClaimTypes.NameIdentifier) ?? claims.FindFirstValue("sub") ?? "unknown";
-
-        return request.OwnerIds?.Length > 0 ? [.. request.OwnerIds, userId] : [userId];
+        var claim = claims.FindFirst(ClaimTypes.NameIdentifier) ?? claims.FindFirst("sub");
+        return claim?.Value ?? string.Empty;
     }
 
     private static AuthorRole GetAuthorRole(Message src)

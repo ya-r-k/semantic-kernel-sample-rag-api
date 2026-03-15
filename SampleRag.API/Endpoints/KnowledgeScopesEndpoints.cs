@@ -12,7 +12,9 @@ public static class KnowledgeScopesEndpoints
 {
     public static void MapKnowledgeScopesEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("api/knowledgescopes").WithTags("KnowledgeScopes");
+        var group = routes.MapGroup("api/knowledgescopes")
+            .WithTags("KnowledgeScopes")
+            .RequireAuthorization();
 
         group.MapPost("/", async (
             [FromBody] CreateScopeRequest[] request,
@@ -48,7 +50,6 @@ public static class KnowledgeScopesEndpoints
 
             return Results.Ok(result);
         })
-            .RequireAuthorization()
             .Produces<IEnumerable<KnowledgeScope>>(StatusCodes.Status200OK);
 
         group.MapPost("{id:guid}/users", async (

@@ -8,7 +8,10 @@ public static class FilesEndpoints
 {
     public static void MapFilesEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("api/files").WithTags("Files");
+        var group = routes.MapGroup("api/files")
+            .WithTags("Files")
+            .RequireAuthorization();
+
         group.MapGet("assets/documents/{fileName}", async ([FromRoute] string fileName, IFileRepository repository, CancellationToken ct) =>
         {
             var stream = await repository.GetAsync("assets/documents", fileName);
@@ -19,8 +22,6 @@ public static class FilesEndpoints
 
             return Results.File(stream, enableRangeProcessing: true, contentType: "application/pdf");
         })
-
-            // .RequireAuthorization()
             .Produces<FileStreamResult>(StatusCodes.Status200OK)
             .Produces<FileStreamResult>(StatusCodes.Status206PartialContent)
             .Produces<FileStreamResult>(StatusCodes.Status401Unauthorized)
