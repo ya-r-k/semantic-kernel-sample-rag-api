@@ -4,7 +4,7 @@ namespace SampleRag.API.Filters;
 
 public class FileValidationFilter : IEndpointFilter
 {
-    private const double MaxFileSizeBytes = 1.5 * 1024 * 1024;
+    private const double MaxFileSizeBytes = 20 * 1024 * 1024;
     private static readonly string[] AllowedPdfContentTypes = ["application/pdf", "application/x-pdf"];
     private static readonly string[] AllowedPdfExtensions = [".pdf"];
 

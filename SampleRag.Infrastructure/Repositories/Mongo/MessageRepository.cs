@@ -9,7 +9,7 @@ public class MessageRepository(IMongoDatabase database) : MongoBaseRepository<Me
 {
     public async Task<IEnumerable<Message>> GetBatchByAsync(GetMessagesByModel filterModel)
     {
-        var sortDefinition = Builders<Message>.Sort.Ascending("_id");
+        var sortDefinition = Builders<Message>.Sort.Ascending(x => x.CreatedAt);
         var filterBuilder = Builders<Message>.Filter;
         var filter = Builders<Message>.Filter.Empty;
 

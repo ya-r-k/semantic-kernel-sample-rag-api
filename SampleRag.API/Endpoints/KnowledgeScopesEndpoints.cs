@@ -22,12 +22,13 @@ public static class KnowledgeScopesEndpoints
             ClaimsPrincipal claims,
             CancellationToken ct) =>
         {
-            var scopes = (request, claims).Adapt<CreateScopeRequest[]>();
+            //var scopes = (request, claims).Adapt<CreateScopeRequest[]>();
+            var scopes = request.Adapt<CreateScopeRequest[]>();
 
             var result = await scopeService.AddAsync(scopes);
             return Results.Created($"/api/knowledgescopes/", result);
         })
-            .RequireAuthorization("RequireAdministrator")
+            .RequireAuthorization("RequireAdmin")
             .Produces<KnowledgeScope>(StatusCodes.Status201Created)
             .Accepts<CreateScopeRequest>("application/json");
 
@@ -37,18 +38,7 @@ public static class KnowledgeScopesEndpoints
             IKnowledgeScopeService scopeService,
             CancellationToken ct) =>
         {
-            var userId = claims.Adapt<string>();
-            var result = Enumerable.Empty<KnowledgeScope>();
-            if (!string.IsNullOrEmpty(userId))
-            {
-                result = await scopeService.GetBatchByAsync(model, userId, ct);
-            }
-            else
-            {
-                result = await scopeService.GetBatchByAsync(model, ct);
-            }
-
-            return Results.Ok(result);
+            return Results.Ok(await scopeService.GetBatchByAsync(model, ct));
         })
             .Produces<IEnumerable<KnowledgeScope>>(StatusCodes.Status200OK);
 
@@ -61,7 +51,7 @@ public static class KnowledgeScopesEndpoints
             await scopeUserService.AddUsersAsync(id, body.UsersId, ct);
             return Results.NoContent();
         })
-            .RequireAuthorization("RequireAdministrator")
+            .RequireAuthorization("RequireAdmin")
             .Produces(StatusCodes.Status204NoContent)
             .Accepts<AddScopeUserRequest>("application/json");
 
@@ -74,7 +64,7 @@ public static class KnowledgeScopesEndpoints
             await scopeUserRepository.RemoveUserAsync(id, [userId], ct);
             return Results.NoContent();
         })
-            .RequireAuthorization("RequireAdministrator")
+            .RequireAuthorization("RequireAdmin")
             .Produces(StatusCodes.Status204NoContent);
     }
 }

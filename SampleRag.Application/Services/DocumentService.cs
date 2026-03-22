@@ -17,7 +17,7 @@ public class DocumentService(
 
         for (var i = 0; i < savingData.Length; i++)
         {
-            savingData[i].LocalLink = await fileRepository.SaveAsync("assets\\documents", items[i].File.FileName, items[i].File.Content);
+            savingData[i].LocalLink = await fileRepository.SaveAsync(Path.Combine("assets", "documents"), items[i].File.FileName, items[i].File.Content);
         }
 
         return await documentsRepository.AddAsync(savingData);

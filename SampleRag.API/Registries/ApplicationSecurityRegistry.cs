@@ -19,7 +19,8 @@ public static class ApplicationSecurityRegistry
                 policy.WithOrigins("http://localhost:5274")
                       .AllowAnyHeader()
                       .AllowAnyMethod()
-                      .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+                      .SetPreflightMaxAge(TimeSpan.FromMinutes(10))
+                      .AllowCredentials();
             });
         });
     }

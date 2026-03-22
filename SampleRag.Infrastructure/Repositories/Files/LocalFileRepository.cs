@@ -7,7 +7,7 @@ public class LocalFileRepository(FilesStorageSettings config) : IFileRepository
 {
     public async Task<string> SaveAsync(string directoryPath, string fileName, string data)
     {
-        var result = Path.Combine("assets\\documents", fileName);
+        var result = Path.Combine(Path.Combine("assets", "documents"), fileName);
         var path = Path.Combine(config.BasePath, result);
 
         path = Path.Combine(config.BasePath, path);

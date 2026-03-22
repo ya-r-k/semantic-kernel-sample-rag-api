@@ -17,8 +17,7 @@ public class MessagesService(
     public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string userId)
     {
         var userMessage = message.Adapt<Message>();
-
-        if (message.ChatId != Guid.Empty)
+        if (userMessage.ChatId == Guid.Empty)
         {
             var newChat = new Chat
             {

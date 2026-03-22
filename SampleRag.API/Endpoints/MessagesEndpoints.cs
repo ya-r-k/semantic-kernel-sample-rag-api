@@ -15,9 +15,15 @@ public static class MessagesEndpoints
             .WithTags("Messages")
             .RequireAuthorization();
 
-        group.MapPost("/", SendUserMessage)
+        group.MapPost("/", ([FromBody] SendMessageRequest message, IMessagesService messagesService, ClaimsPrincipal user) =>
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+
+            return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, userId));
+        })
             .RequireRateLimiting("send-message")
             .Produces<MessagePartResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Accepts<SendMessageRequest>("application/json");
 
@@ -26,22 +32,7 @@ public static class MessagesEndpoints
             return Results.Ok(await messageService.GetBatchByAsync(model));
         })
             .Produces<Message>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
             .Accepts<GetMessagesByModel>("application/json");
-    }
-
-    public static async IAsyncEnumerable<MessagePartResponse> SendUserMessage(
-        [FromBody] SendMessageRequest message,
-        IMessagesService messagesService,
-        ClaimsPrincipal user)
-    {
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
-
-        if (userId is not null)
-        {
-            await foreach (var part in messagesService.GenerateAiResponce(message, userId))
-            {
-                yield return part;
-            }
-        }
     }
 }
