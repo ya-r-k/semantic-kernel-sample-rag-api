@@ -9,3 +9,6 @@ GET {{Sample.API_HostAddress}}/todos/1
 Accept: application/json
 
 ###
+
+GET {{Sample.API_HostAddress}}/api/files/assets/documents/report1.pdf
+Accept: application/json

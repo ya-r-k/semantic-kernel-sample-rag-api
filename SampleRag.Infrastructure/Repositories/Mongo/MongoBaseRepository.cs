@@ -1,76 +1,90 @@
-﻿using MongoDB.Driver;
-using SampleRag.Application.Interfaces;
-using SampleRag.Domain.Models;
 using System.Linq.Expressions;
+using MongoDB.Driver;
+using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Models.Abstractions;
 
 namespace SampleRag.Infrastructure.Repositories.Mongo;
 
-public class MongoBaseRepository<TId, TModel>(IMongoDatabase database) : IRepository<TId, TModel>
-    where TId : unmanaged
-    where TModel : Entity<TId>
+public class MongoBaseRepository<TEntity>(IMongoDatabase database) : IRepository<Guid, TEntity>
+    where TEntity : IEntity<Guid>
 {
-    protected readonly IMongoCollection<TModel> _collection = database.GetCollection<TModel>(typeof(TModel).Name);
-
-    public async Task<IEnumerable<TModel>> AddAsync(TModel[] items)
+    protected readonly IMongoCollection<TEntity> collection = database.GetCollection<TEntity>(typeof(TEntity).Name, new MongoCollectionSettings
     {
-        var addedItems = new List<TModel>(items);
+        AssignIdOnInsert = true,
+    });
+
+    public async Task<IEnumerable<TEntity>> AddAsync(TEntity[] items, CancellationToken ct = default)
+    {
+        var addedItems = new List<TEntity>(items);
 
         try
         {
-            await _collection.InsertManyAsync(items, new InsertManyOptions { IsOrdered = false });
+            await this.collection.InsertManyAsync(addedItems, new InsertManyOptions { IsOrdered = true }, ct);
         }
-        catch (MongoBulkWriteException<TModel> ex)
+        catch (MongoBulkWriteException<TEntity> ex)
         {
-            // Фильтруем только успешно вставленные записи
             addedItems = [.. addedItems.Except(ex.WriteErrors.Select(err => items[err.Index]))];
         }
 
         return addedItems;
     }
 
-    public async Task UpdateAsync(TModel[] items)
+    public async Task UpdateAsync(TEntity[] items, CancellationToken ct = default)
     {
         var bulkOps = items.Select(item =>
-            new ReplaceOneModel<TModel>(
-                Builders<TModel>.Filter.Eq(e => e.Id, item.Id),
-                item
-            )).ToList();
+            new ReplaceOneModel<TEntity>(
+                Builders<TEntity>.Filter.Eq(e => e.Id, item.Id),
+                item)).ToList();
 
-        await _collection.BulkWriteAsync(bulkOps);
+        await this.collection.BulkWriteAsync(bulkOps, cancellationToken: ct);
     }
 
-    public async Task<IEnumerable<TModel>> GetBatchByAsync(Expression<Func<TModel, bool>>? predicate, int? batchSize)
+    public async Task SetFieldValueAsync<T>(Expression<Func<TEntity, T>> fieldSelector, T value)
+        where T : unmanaged
     {
-        var sortDefinition = Builders<TModel>.Sort.Ascending("_id");
-        var builder = Builders<TModel>.Filter;
-        var filter = Builders<TModel>.Filter.Empty;
+        var filter = Builders<TEntity>.Filter.Empty;
+        var update = Builders<TEntity>.Update.Set(fieldSelector, value);
+
+        await this.collection.UpdateManyAsync(filter, update);
+    }
+
+    public async Task<IEnumerable<TEntity>> GetBatchByAsync(Expression<Func<TEntity, bool>>? predicate, int? batchSize, CancellationToken ct = default)
+    {
+        var sortDefinition = Builders<TEntity>.Sort.Ascending("_id");
+        var filterBuilder = Builders<TEntity>.Filter;
+        var filter = Builders<TEntity>.Filter.Empty;
 
         if (predicate != null)
         {
-            filter &= builder.Where(predicate);
+            filter &= filterBuilder.Where(predicate);
         }
 
-        var query = _collection.Find(filter).Sort(sortDefinition);
+        var query = this.collection.Find(filter).Sort(sortDefinition);
 
         if (batchSize.HasValue)
         {
             query = query.Limit(batchSize.Value);
         }
 
-        return await query.ToListAsync();
+        return await query.ToListAsync(cancellationToken: ct);
     }
 
-    public async Task<IEnumerable<TModel>> GetByIdsAsync(params TId[] ids)
+    public async Task<IEnumerable<TEntity>> GetByIdsAsync(Guid[] ids, CancellationToken ct = default)
     {
-        var filter = Builders<TModel>.Filter.In(x => x.Id, ids);
+        var filter = Builders<TEntity>.Filter.In(x => x.Id, ids);
 
-        return await _collection.Find(filter).ToListAsync();
+        return await this.collection.Find(filter).ToListAsync(cancellationToken: ct);
     }
 
-    public async Task RemoveByIdsAsync(params TId[] ids)
+    public async Task RemoveByIdsAsync(Guid[] ids, CancellationToken ct = default)
     {
-        var filter = Builders<TModel>.Filter.In(x => x.Id, ids);
+        var filter = Builders<TEntity>.Filter.In(x => x.Id, ids);
 
-        await _collection.DeleteManyAsync(filter);
+        await this.collection.DeleteManyAsync(filter, ct);
+    }
+
+    public async Task ClearAsync(CancellationToken ct = default)
+    {
+        await this.collection.Database.DropCollectionAsync(typeof(TEntity).Name, ct);
     }
 }

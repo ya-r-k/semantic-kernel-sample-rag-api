@@ -7,16 +7,24 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/Dotnet.gitignore
 
+**/wwwroot
+
+# Spec Driven Development
+**/.specify/templates
+**/.specify/scripts/powershell
+
+# AI IDEs
+**/.cursor
+
 # Visual Studio
 **/.vs
 **/bin
 **/obj
-**/.vs
 *.ini
 *.cache
 *.log
 *.tmp
-
+*.csproj.user
 
 # Bencharks artifacts
 **/BenchmarkDotNet.Artifacts

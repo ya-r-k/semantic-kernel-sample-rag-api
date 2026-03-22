@@ -1,39 +1,22 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Routing.Constraints;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.Qdrant;
-using OllamaSharp;
-using Qdrant.Client;
 using SampleRag.API.Endpoints;
-using SampleRag.Di;
+using SampleRag.API.Endpoints.Auth;
+using SampleRag.API.Registries;
+using SampleRag.Di.Registries;
 using SampleRag.Domain.Models.Configs;
-using System.Threading.RateLimiting;
+using Serilog;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
-//builder.AddServiceDefaults();
+builder.Logging.ClearProviders();
+builder.Logging.AddSerilog(new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger());
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-builder.Services.AddRateLimiter(options =>
-{
-    options.AddFixedWindowLimiter("fixed", opt =>
-    {
-        opt.PermitLimit = 4;  // Максимум 4 запроса
-        opt.Window = TimeSpan.FromSeconds(12);  // За 12 секунд
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 2;  // Очередь на 2 запроса
-    });
-
-    // Обработка превышения лимита
-    options.OnRejected = async (context, token) =>
-    {
-        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-        await context.HttpContext.Response.WriteAsync("Too many requests", token);
-    };
-});
+builder.Services.ConfigureSwaggerApiDocs();
 
 builder.Services.Configure<RouteOptions>(options =>
 {
@@ -45,24 +28,34 @@ builder.Services.Configure<RouteOptions>(options =>
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
 });*/
 
-var lmConfig = builder.Configuration.GetSection(nameof(GenAiProviderSettings)).Get<GenAiProviderSettings>();
-var vectorConfig = builder.Configuration.GetSection(nameof(VectorDbSettings)).Get<VectorDbSettings>();
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new ();
 
-builder.Services.AddQdrantVectorStore(_ => new QdrantClient(new Uri(vectorConfig!.Url)),
-    _ => new QdrantVectorStoreOptions
-    {
-        EmbeddingGenerator = new OllamaApiClient(lmConfig!.TextModel, lmConfig.TextEmbeddingModel),
-        HasNamedVectors = false,
-    });
+builder.Services.ConfigureJwtAuth(jwtSettings);
+builder.Services.ConfigureCors();
+builder.Services.ConfigureRateLimiting();
 
-builder.Services.AddKernel()
-    .AddOllamaChatCompletion(lmConfig!.TextModel, new Uri(lmConfig.Url))
-    .AddOllamaTextGeneration(lmConfig!.TextModel, new Uri(lmConfig.Url))
-    .AddOllamaEmbeddingGenerator(lmConfig.TextEmbeddingModel, new Uri(lmConfig.Url));
+builder.Services.ConfigureMapsterSettings();
+builder.Services.ConfigureBusinessLogic(builder.Configuration);
 
-builder.Services.ConfigureDependencies(builder.Configuration, builder.Environment);
+var dbSettings = builder.Configuration.GetSection(nameof(DbSettings)).Get<DbSettings>() ?? new ();
+var jobsSettings = builder.Configuration.GetSection(nameof(DocumentsJobsSettings)).Get<DocumentsJobsSettings>() ?? new ();
+var vectorDbSettings = builder.Configuration.GetSection(nameof(VectorDbSettings)).Get<VectorDbSettings>() ?? new ();
+var lmConfig = builder.Configuration.GetSection(nameof(GenAiProviderSettings)).Get<GenAiProviderSettings>() ?? new ();
+
+builder.Services.ConfigureMongoDb(dbSettings);
+//builder.Services.ConfigureQuartzJobs(dbSettings, jobsSettings);
+builder.Services.ConfigureKernel(lmConfig);
+builder.Services.ConfigureQdrant(vectorDbSettings);
+builder.Services.ConfigureLocalFilesPersistance(builder.Environment.WebRootPath);
 
 var app = builder.Build();
+
+app.UseCors();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseRateLimiter();
 
 app.Use(async (context, next) =>
 {
@@ -81,6 +74,12 @@ app.MapChatsEndpoints();
 app.MapMessagesEndpoints();
 app.MapDocumentsEndpoints();
 app.MapFilesEndpoints();
-app.MapKnowledgeGroupsEndpoints();
+app.MapKnowledgeScopesEndpoints();
+app.MapFeedbacksEndpoints();
+
+if (builder.Environment.IsDevelopment())
+{
+    app.MapDevAuthEndpoints();
+}
 
 app.Run();

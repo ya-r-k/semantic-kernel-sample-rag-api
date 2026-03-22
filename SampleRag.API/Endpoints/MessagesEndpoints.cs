@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using SampleRag.Application.Interfaces.Services;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
+using SampleRag.Domain.Entities;
+using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
-using System.Runtime.CompilerServices;
+using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.API.Endpoints;
 
@@ -9,20 +11,28 @@ public static class MessagesEndpoints
 {
     public static void MapMessagesEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("api/messages").WithTags("Messages");
-        group.MapPost("/", SendUserMessage)
-            .Produces<MessageData>(StatusCodes.Status200OK)
-            .Accepts<MessageData>("application/json");
-    }
+        var group = routes.MapGroup("api/messages")
+            .WithTags("Messages")
+            .RequireAuthorization();
 
-    public static async IAsyncEnumerable<MessagePart> SendUserMessage(
-        [FromBody] MessageData message,
-        IMessageService messagesService,
-        [EnumeratorCancellation] CancellationToken ct)
-    {
-        await foreach (var part in messagesService.GenerateAiResponce(message))
+        group.MapPost("/", ([FromBody] SendMessageRequest message, IMessagesService messagesService, ClaimsPrincipal user) =>
         {
-            yield return part;
-        }
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+
+            return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, userId));
+        })
+            .RequireRateLimiting("send-message")
+            .Produces<MessagePartResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Accepts<SendMessageRequest>("application/json");
+
+        group.MapPost("/filter", async ([FromBody] GetMessagesByModel model, IMessagesService messageService, CancellationToken ct) =>
+        {
+            return Results.Ok(await messageService.GetBatchByAsync(model));
+        })
+            .Produces<Message>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Accepts<GetMessagesByModel>("application/json");
     }
 }

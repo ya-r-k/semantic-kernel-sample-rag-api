@@ -1,36 +1,51 @@
-﻿using SampleRag.Application.Interfaces;
-using SampleRag.Application.Interfaces.Services;
-using SampleRag.Domain.Models;
+using Mapster;
+using SampleRag.Domain.Entities;
+using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Application.Services;
 
 public class DocumentService(
-    IRepository<int, DocumentData> documentsRepository,
+    IDocumentChunkService documentChunkService,
+    IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository,
     IFileRepository fileRepository) : IDocumentService
 {
-    public async Task<IEnumerable<DocumentData>> AddAsync(params UploadDocumentRequestModel[] items)
+    public async Task<IEnumerable<Document>> AddAsync(params UploadDocumentRequestModel[] items)
     {
-        var savingData = items.Select(x => new DocumentData
-        {
-            Name = x.Name,
-        }).ToArray();
+        var savingData = items.Adapt<Document[]>();
 
-        for (var i = 0; i < savingData.Length; i++) 
+        for (var i = 0; i < savingData.Length; i++)
         {
-            savingData[i].LocalLink = await fileRepository.SaveAsync(items[i].File.Data, items[i].File.FileName);
+            savingData[i].LocalLink = await fileRepository.SaveAsync(Path.Combine("assets", "documents"), items[i].File.FileName, items[i].File.Content);
         }
 
         return await documentsRepository.AddAsync(savingData);
     }
 
-    public async Task<IEnumerable<DocumentData>> GetByIdsAsync(params int[] ids)
+    public async Task<IEnumerable<Document>> GetBatchByAsync(GetDocumentsByModel model)
+    {
+        return await documentsRepository.GetBatchByAsync(model);
+    }
+
+    public async Task<IEnumerable<Document>> GetByIdsAsync(params Guid[] ids)
     {
         return await documentsRepository.GetByIdsAsync(ids);
     }
 
-    public Task RemoveByIdsAsync(params int[] ids)
+    public async Task RemoveAllChunksAsync(CancellationToken ct = default)
+    {
+        await documentsRepository.SetFieldValueAsync(x => x.IsChunked, false);
+        await documentChunkService.RemoveAllAsync(ct);
+    }
+
+    public Task RemoveByIdsAsync(params Guid[] ids)
     {
         return documentsRepository.RemoveByIdsAsync(ids);
+    }
+
+    public Task UpdateAsync(params Document[] items)
+    {
+        return documentsRepository.UpdateAsync(items);
     }
 }
