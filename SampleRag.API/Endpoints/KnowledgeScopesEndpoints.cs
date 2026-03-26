@@ -2,8 +2,8 @@ using System.Security.Claims;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.Domain.Entities;
-using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
+using SampleRag.Domain.Models.Enums;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.API.Endpoints;
@@ -19,13 +19,10 @@ public static class KnowledgeScopesEndpoints
         group.MapPost("/", async (
             [FromBody] CreateScopeRequest[] request,
             IKnowledgeScopeService scopeService,
-            ClaimsPrincipal claims,
             CancellationToken ct) =>
         {
-            //var scopes = (request, claims).Adapt<CreateScopeRequest[]>();
-            var scopes = request.Adapt<CreateScopeRequest[]>();
+            var result = await scopeService.AddAsync(request, ct);
 
-            var result = await scopeService.AddAsync(scopes);
             return Results.Created($"/api/knowledgescopes/", result);
         })
             .RequireAuthorization("RequireAdmin")
@@ -38,33 +35,24 @@ public static class KnowledgeScopesEndpoints
             IKnowledgeScopeService scopeService,
             CancellationToken ct) =>
         {
-            return Results.Ok(await scopeService.GetBatchByAsync(model, ct));
+            var role = claims.Adapt<UserRole>();
+            return Results.Ok(await scopeService.GetBatchByAsync(model, role, ct));
         })
-            .Produces<IEnumerable<KnowledgeScope>>(StatusCodes.Status200OK);
+            .Produces<IEnumerable<KnowledgeScope>>(StatusCodes.Status200OK)
+            .Accepts<GetBatchByModel>("application/json");
 
-        group.MapPost("{id:guid}/users", async (
+        group.MapPatch("{id:guid}/roles", async (
             Guid id,
-            [FromBody] AddScopeUserRequest body,
-            IKnowledgeScopeService scopeUserService,
+            [FromBody] UpdateScopeRolesRequest body,
+            IKnowledgeScopeService scopeService,
             CancellationToken ct) =>
         {
-            await scopeUserService.AddUsersAsync(id, body.UsersId, ct);
+            await scopeService.UpdateRolesAsync(id, body.AddingRoles, body.RemovingRoles, ct);
+
             return Results.NoContent();
         })
             .RequireAuthorization("RequireAdmin")
             .Produces(StatusCodes.Status204NoContent)
-            .Accepts<AddScopeUserRequest>("application/json");
-
-        group.MapDelete("{id:guid}/users/{userId}", async (
-            Guid id,
-            string userId,
-            IKnowledgeScopeUserRepository scopeUserRepository,
-            CancellationToken ct) =>
-        {
-            await scopeUserRepository.RemoveUserAsync(id, [userId], ct);
-            return Results.NoContent();
-        })
-            .RequireAuthorization("RequireAdmin")
-            .Produces(StatusCodes.Status204NoContent);
+            .Accepts<UpdateScopeRolesRequest>("application/json");
     }
 }

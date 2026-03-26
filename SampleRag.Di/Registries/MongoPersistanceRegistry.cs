@@ -1,4 +1,3 @@
-using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -38,8 +37,7 @@ public static class MongoPersistanceRegistry
         services.AddTransient<IFilterRepository<Guid, Document, GetDocumentsByModel>, DocumentRepository>();
         services.AddTransient<IFilterRepository<Guid, Message, GetMessagesByModel>, MessageRepository>();
         services.AddTransient<IFilterRepository<Guid, Chat, GetChatsByModel>, ChatRepository>();
-        services.AddTransient<IFilterRepository<Guid, KnowledgeScope, GetBatchByModel>, KnowledgeScopeRepository>();
         services.AddTransient<IFilterRepository<Guid, Feedback, GetFeedbackByModel>, FeedbackRepository>();
-        services.AddTransient<IKnowledgeScopeUserRepository, KnowledgeScopeUserRepository>();
+        services.AddTransient<IKnowledgeScopeRepository, KnowledgeScopeRepository>();
     }
 }

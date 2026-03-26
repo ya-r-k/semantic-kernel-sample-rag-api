@@ -68,22 +68,13 @@ public static class MapsterMappingRegistry
             .MapWith(src => GetUserId(src))
             .Compile();
 
+        TypeAdapterConfig.GlobalSettings.NewConfig<ClaimsPrincipal, UserRole>()
+            .MapWith(src => GetUserRole(src))
+            .Compile();
+
         TypeAdapterConfig.GlobalSettings.NewConfig<(CreateChatRequest request, ClaimsPrincipal claims), Chat>()
             .MapWith(src => src.request.Adapt<Chat>())
             .Map(dest => dest.OwnerIds, src => src.request.OwnerIds.Append(src.claims.Adapt<string>()))
-            .Compile();
-
-        TypeAdapterConfig.GlobalSettings.NewConfig<(CreateScopeRequest scope, ClaimsPrincipal claims), CreateScopeRequest>()
-            .MapWith(src => src.scope)
-            .Map(dest => dest.UsersIds, src => src.scope.UsersIds.Append(src.claims.Adapt<string>()))
-            .Compile();
-
-        TypeAdapterConfig.GlobalSettings.NewConfig<(CreateScopeRequest[] scopes, ClaimsPrincipal claims), CreateScopeRequest[]>()
-            .MapWith(src => src.scopes.Select(x => new CreateScopeRequest
-            {
-                Name = x.Name,
-                UsersIds = x.UsersIds.Append(src.claims.Adapt<string>()).ToArray(),
-            }).ToArray())
             .Compile();
 
         return services;
@@ -98,6 +89,13 @@ public static class MapsterMappingRegistry
     {
         var claim = claims.FindFirst(ClaimTypes.NameIdentifier) ?? claims.FindFirst("sub");
         return claim?.Value ?? string.Empty;
+    }
+
+    private static UserRole GetUserRole(ClaimsPrincipal claims)
+    {
+        var claim = claims.FindFirst(ClaimTypes.Role) ?? claims.FindFirst("roles");
+
+        return (claim?.Value ?? string.Empty).Adapt<UserRole>();
     }
 
     private static AuthorRole GetAuthorRole(Message src)
