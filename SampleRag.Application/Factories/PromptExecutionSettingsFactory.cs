@@ -25,8 +25,8 @@ public class PromptExecutionSettingsFactory(
 
         if (currentFunctionsOptions is not null && currentFunctionsOptions.Keys.Count > 0)
         {
-            var transformedFunctions = CreateFunctionWithParameters(currentFunctionsOptions, outerArguments);
-            result.FunctionChoiceBehavior = FunctionChoiceBehavior.Required(transformedFunctions);
+            //var transformedFunctions = CreateFunctionWithParameters(currentFunctionsOptions, outerArguments);
+            result.FunctionChoiceBehavior = FunctionChoiceBehavior.Required(currentFunctionsOptions.Keys);
         }
         else
         {
