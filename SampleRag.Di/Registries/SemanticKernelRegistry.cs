@@ -42,7 +42,7 @@ public static class SemanticKernelRegistry
 
     private static void ConfigurePromptExecutionSettings(this IServiceCollection services)
     {
-        services.AddSingleton<ISettingsFactory<PromptExecutionSettings>>(sp =>
+        services.AddSingleton<IDictionary<string, IDictionary<KernelFunction, KernelFunctionFromMethodOptions>>>(sp =>
         {
             var kernel = sp.GetRequiredService<Kernel>();
             var plugins = kernel.Plugins.ToArray();
@@ -51,13 +51,13 @@ public static class SemanticKernelRegistry
                 plugins,
                 parameter => parameter.Name != "scopeId");
 
-            var toolsSettings = new Dictionary<string, IDictionary<KernelFunction, KernelFunctionFromMethodOptions>>
+            return new Dictionary<string, IDictionary<KernelFunction, KernelFunctionFromMethodOptions>>
             {
                 ["naive-rag"] = transformedFunctionsOptions,
             };
-
-            return new PromptExecutionSettingsFactory(toolsSettings);
         });
+
+        services.AddTransient<ISettingsFactory<PromptExecutionSettings>, PromptExecutionSettingsFactory>();
     }
 
     private static IDictionary<KernelFunction, KernelFunctionFromMethodOptions> CreateKernelFunctionsOptions(KernelPlugin[] plugins, Predicate<KernelParameterMetadata> includeKernelParameter)

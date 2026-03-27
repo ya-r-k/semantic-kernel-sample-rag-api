@@ -30,7 +30,7 @@ public class PromptExecutionSettingsFactory(
         }
         else
         {
-            result.FunctionChoiceBehavior = FunctionChoiceBehavior.Auto();
+            result.FunctionChoiceBehavior = FunctionChoiceBehavior.None();
         }
 
         return result;
