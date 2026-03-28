@@ -2,29 +2,27 @@ using Mapster;
 using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
+using SampleRag.Domain.Models.Enums;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Application.Services;
 
 public class KnowledgeScopeService(
-    IFilterRepository<Guid, KnowledgeScope, GetBatchByModel> scopeRepository,
-    IKnowledgeScopeUserRepository scopeUserRepository) : IKnowledgeScopeService
+    IKnowledgeScopeRepository scopeRepository) : IKnowledgeScopeService
 {
-    public async Task<bool> HasAccessAsync(Guid scopeId, string userId, CancellationToken ct = default)
+    public async Task<bool> HasAccessAsync(Guid scopeId, UserRole role, CancellationToken ct = default)
     {
-        return await scopeUserRepository.HasAccessAsync(scopeId, userId, ct);
+        return await scopeRepository.HasAccessAsync(scopeId, role, ct);
     }
 
-    public async Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, CancellationToken ct = default)
+    public async Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default)
     {
-        return await scopeRepository.GetBatchByAsync(filterModel);
-    }
+        if (role is UserRole.Admin or UserRole.SuperAdmin)
+        {
+            return await scopeRepository.GetBatchByAsync(filterModel);
+        }
 
-    public async Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, string userId, CancellationToken ct = default)
-    {
-        var scopesIds = await scopeUserRepository.GetScopeIdsForUserAsync(filterModel, userId, ct);
-
-        return await scopeRepository.GetByIdsAsync([.. scopesIds], ct);
+        return await scopeRepository.GetBatchByAsync(filterModel, role, ct);
     }
 
     public async Task<IEnumerable<KnowledgeScope>> AddAsync(IEnumerable<CreateScopeRequest> items, CancellationToken ct = default)
@@ -34,15 +32,9 @@ public class KnowledgeScopeService(
         return await scopeRepository.AddAsync(scopes, ct);
     }
 
-    public async Task AddUsersAsync(Guid id, string[] usersIds, CancellationToken ct)
+    public async Task UpdateRolesAsync(Guid scopeId, UserRole[] addingRoles, UserRole[] removingRoles, CancellationToken ct)
     {
-        var items = usersIds.Select(x => new KnowledgeScopeUser
-        {
-            ScopeId = id,
-            UserId = x,
-        }).ToArray();
-
-        await scopeUserRepository.AddAsync(items, ct);
+        await scopeRepository.UpdateRolesAsync(scopeId, addingRoles, removingRoles, ct);
     }
 
     public async Task RemoveByIds(Guid[] ids, CancellationToken ct = default)

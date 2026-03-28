@@ -1,0 +1,17 @@
+using SampleRag.Domain.Entities;
+using SampleRag.Domain.Models.Enums;
+using SampleRag.Domain.RequestModels;
+
+namespace SampleRag.Domain.Interfaces;
+
+/// <summary>
+/// Repository for scope-user access. Enforces (ScopeId, UserId) uniqueness.
+/// </summary>
+public interface IKnowledgeScopeRepository : IFilterRepository<Guid, KnowledgeScope, GetBatchByModel>
+{
+    Task<bool> HasAccessAsync(Guid scopeId, UserRole role, CancellationToken ct = default);
+
+    Task UpdateRolesAsync(Guid scopeId, UserRole[] addingRoles, UserRole[] removingRoles, CancellationToken ct = default);
+
+    Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default);
+}

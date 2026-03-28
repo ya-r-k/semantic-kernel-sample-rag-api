@@ -27,6 +27,7 @@ public static class DocumentsEndpoints
         })
             .AddEndpointFilter<DocumentUploadValidationFilter>()
             .AddEndpointFilter<FileValidationFilter>()
+            .AddEndpointFilter<KnowledgeScopeAccessFilter>()
             .Produces(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)
