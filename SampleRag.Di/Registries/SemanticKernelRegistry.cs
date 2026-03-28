@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -30,40 +31,70 @@ public static class SemanticKernelRegistry
         services.ConfigurePromptExecutionSettings();
 
         // Configures Semantic Memory
-        // services.AddKernelMemory<MemoryServerless>();
         services.ConfigureGenerators();
     }
 
     private static void ConfigureGenerators(this IServiceCollection services)
     {
         services.AddTransient<IDataGenerator, SemanticKernelDataGenerator>();
-        services.AddTransient<IEmbeddingGenerator<DocumentChunk, Embedding<float>>, DocumentChunkEmbeddingGenerator>();
+        services.AddSingleton<IEmbeddingGenerator<DocumentChunk, Embedding<float>>, DocumentChunkEmbeddingGenerator>();
     }
 
     private static void ConfigurePromptExecutionSettings(this IServiceCollection services)
     {
-        var executionSettingsBase = new Dictionary<string, PromptExecutionSettings>()
-        {
-            ["with-auto-choosing-functions"] = new PromptExecutionSettings
-            {
-                FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
-            },
-        };
-
-        services.AddSingleton<ISettingsFactory<PromptExecutionSettings>>(sp =>
+        services.AddSingleton(sp =>
         {
             var kernel = sp.GetRequiredService<Kernel>();
-            var retrievalPlugin = kernel.Plugins.GetFunction(nameof(RetrievalPlugin), "RetrieveRelevantChunks");
+            var plugins = kernel.Plugins.ToArray();
 
-            var executionSettings = new Dictionary<string, PromptExecutionSettings>(executionSettingsBase)
+            var transformedFunctionsOptions = CreateKernelFunctionsOptions(
+                plugins,
+                parameter => parameter.Name != "scopeId");
+
+            return new Dictionary<string, ImmutableDictionary<KernelFunction, KernelFunctionFromMethodOptions>>
             {
-                ["naive-rag"] = new PromptExecutionSettings
-                {
-                    FunctionChoiceBehavior = FunctionChoiceBehavior.Required([retrievalPlugin]),
-                },
-            };
-
-            return new PromptExecutionSettingsFactory(executionSettings);
+                ["naive-rag"] = transformedFunctionsOptions.ToImmutableDictionary(),
+            }.ToImmutableDictionary();
         });
+
+        services.AddTransient<ISettingsFactory<PromptExecutionSettings>, PromptExecutionSettingsFactory>();
+    }
+
+    private static IDictionary<KernelFunction, KernelFunctionFromMethodOptions> CreateKernelFunctionsOptions(KernelPlugin[] plugins, Predicate<KernelParameterMetadata> includeKernelParameter)
+    {
+        var functionsOptionsPairs = new Dictionary<KernelFunction, KernelFunctionFromMethodOptions>();
+
+        foreach (var plugin in plugins)
+        {
+            foreach (var function in plugin)
+            {
+                functionsOptionsPairs.Add(function, new KernelFunctionFromMethodOptions()
+                {
+                    FunctionName = function.Name,
+                    Description = function.Description,
+                    Parameters = CreateParameterMetadataWithParameters(function.Metadata.Parameters, includeKernelParameter),
+                    ReturnParameter = function.Metadata.ReturnParameter,
+                });
+            }
+        }
+
+        return functionsOptionsPairs;
+    }
+
+    /// <summary>
+    /// Create a list of KernelParameterMetadata instances from the provided instances which only includes permitted parameters.
+    /// </summary>
+    private static List<KernelParameterMetadata> CreateParameterMetadataWithParameters(IReadOnlyList<KernelParameterMetadata> parameters, Predicate<KernelParameterMetadata> includeKernelParameter)
+    {
+        var parametersToInclude = new List<KernelParameterMetadata>();
+        foreach (var parameter in parameters)
+        {
+            if (includeKernelParameter.Invoke(parameter))
+            {
+                parametersToInclude.Add(parameter);
+            }
+        }
+
+        return parametersToInclude;
     }
 }
