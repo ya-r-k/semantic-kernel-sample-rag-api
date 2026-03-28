@@ -62,12 +62,8 @@ public class MessagesService(
             ChatId = userMessage.ChatId,
         };
 
-        var outerArgs = new Dictionary<string, object>
-        {
-            ["scopeId"] = Guid.NewGuid(),
-        };
         var aiTextBuilder = new StringBuilder();
-        await foreach (var part in dataGenerator.GenerateStreamingData(messagesHistory.Append(userMessage), "naive-rag", outerArgs))
+        await foreach (var part in dataGenerator.GenerateStreamingData(messagesHistory.Append(userMessage), "naive-rag"))
         {
             if (part.Step is GenerationStep.ResponseMessage)
             {

@@ -42,59 +42,28 @@ public static class SemanticKernelRegistry
 
     private static void ConfigurePromptExecutionSettings(this IServiceCollection services)
     {
-        services.AddSingleton<IDictionary<string, IDictionary<KernelFunction, KernelFunctionFromMethodOptions>>>(sp =>
+        var executionSettingsBase = new Dictionary<string, PromptExecutionSettings>()
+        {
+            ["with-auto-choosing-functions"] = new PromptExecutionSettings
+            {
+                FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
+            },
+        };
+
+        services.AddSingleton<ISettingsFactory<PromptExecutionSettings>>(sp =>
         {
             var kernel = sp.GetRequiredService<Kernel>();
-            var plugins = kernel.Plugins.ToArray();
+            var retrievalPlugin = kernel.Plugins.GetFunction(nameof(RetrievalPlugin), "RetrieveRelevantChunks");
 
-            var transformedFunctionsOptions = CreateKernelFunctionsOptions(
-                plugins,
-                parameter => parameter.Name != "scopeId");
-
-            return new Dictionary<string, IDictionary<KernelFunction, KernelFunctionFromMethodOptions>>
+            var executionSettings = new Dictionary<string, PromptExecutionSettings>(executionSettingsBase)
             {
-                ["naive-rag"] = transformedFunctionsOptions,
-            };
-        });
-
-        services.AddTransient<ISettingsFactory<PromptExecutionSettings>, PromptExecutionSettingsFactory>();
-    }
-
-    private static IDictionary<KernelFunction, KernelFunctionFromMethodOptions> CreateKernelFunctionsOptions(KernelPlugin[] plugins, Predicate<KernelParameterMetadata> includeKernelParameter)
-    {
-        var functionsOptionsPairs = new Dictionary<KernelFunction, KernelFunctionFromMethodOptions>();
-
-        foreach (var plugin in plugins)
-        {
-            foreach (var function in plugin)
-            {
-                functionsOptionsPairs.Add(function, new KernelFunctionFromMethodOptions()
+                ["naive-rag"] = new PromptExecutionSettings
                 {
-                    FunctionName = function.Name,
-                    Description = function.Description,
-                    Parameters = CreateParameterMetadataWithParameters(function.Metadata.Parameters, includeKernelParameter),
-                    ReturnParameter = function.Metadata.ReturnParameter,
-                });
-            }
-        }
+                    FunctionChoiceBehavior = FunctionChoiceBehavior.Required([retrievalPlugin]),
+                },
+            };
 
-        return functionsOptionsPairs;
-    }
-
-    /// <summary>
-    /// Create a list of KernelParameterMetadata instances from the provided instances which only includes permitted parameters.
-    /// </summary>
-    private static List<KernelParameterMetadata> CreateParameterMetadataWithParameters(IReadOnlyList<KernelParameterMetadata> parameters, Predicate<KernelParameterMetadata> includeKernelParameter)
-    {
-        var parametersToInclude = new List<KernelParameterMetadata>();
-        foreach (var parameter in parameters)
-        {
-            if (includeKernelParameter.Invoke(parameter))
-            {
-                parametersToInclude.Add(parameter);
-            }
-        }
-
-        return parametersToInclude;
+            return new PromptExecutionSettingsFactory(executionSettings);
+        });
     }
 }

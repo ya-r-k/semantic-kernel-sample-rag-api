@@ -38,12 +38,12 @@ public class SemanticKernelDataGenerator(
         }
     }
 
-    public async IAsyncEnumerable<MessagePartResponse> GenerateStreamingData(IEnumerable<Message> messages, string executionSettingsName, IDictionary<string, object>? outerArguments = default, [EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<MessagePartResponse> GenerateStreamingData(IEnumerable<Message> messages, string executionSettingsName, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var chat = messages.Adapt<ChatHistory>();
         var chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
 
-        await foreach (var content in chatCompletion.GetStreamingChatMessageContentsAsync(chat, settingsFactory.GetSettings(executionSettingsName, outerArguments), kernel, cancellationToken: ct))
+        await foreach (var content in chatCompletion.GetStreamingChatMessageContentsAsync(chat, settingsFactory.GetSettings(executionSettingsName), kernel, cancellationToken: ct))
         {
             var result = content.Adapt<MessagePartResponse>();
             if (content.Role.Equals(AuthorRole.Tool))
