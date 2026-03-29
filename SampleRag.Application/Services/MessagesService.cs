@@ -14,7 +14,7 @@ public class MessagesService(
     IChatService chatService,
     IFilterRepository<Guid, Message, GetMessagesByModel> messagesRepository) : IMessagesService
 {
-    public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string role, string userId)
+    public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string ownerId)
     {
         var userMessage = message.Adapt<Message>();
         if (userMessage.ChatId == Guid.Empty)
@@ -22,7 +22,7 @@ public class MessagesService(
             var newChat = new Chat
             {
                 Name = string.Concat(message.Text.Take(80)),
-                OwnerId = userId,
+                OwnerId = ownerId,
             };
 
             var createdChats = await chatService.AddAsync(newChat);

@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using Mapster;
 using Microsoft.AspNetCore.Mvc;
+using SampleRag.API.Filters;
 using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
@@ -17,12 +19,12 @@ public static class MessagesEndpoints
 
         group.MapPost("/", ([FromBody] SendMessageRequest message, IMessagesService messagesService, ClaimsPrincipal user) =>
         {
-            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
-            var role = user.FindFirstValue(ClaimTypes.Role) ?? user.FindFirstValue("roles");
+            var userId = user.Adapt<string>();
 
-            return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, role, userId));
+            return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, userId));
         })
             .RequireRateLimiting("send-message")
+            .AddEndpointFilter<KnowledgeScopeAccessFilter>()
             .Produces<MessagePartResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
