@@ -3,8 +3,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using SampleRag.Application.Factories;
-using SampleRag.Application.Filters.Invocation;
-using SampleRag.Application.Filters.Render;
 using SampleRag.Application.Plugins;
 using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;

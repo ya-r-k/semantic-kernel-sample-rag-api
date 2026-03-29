@@ -15,6 +15,11 @@ public class KnowledgeScopeService(
         return await scopeRepository.HasAccessAsync(scopeId, role, ct);
     }
 
+    public async Task<bool> HasScopeIdAsync(Guid scopeId, CancellationToken ct = default)
+    {
+        return await scopeRepository.HasScopeIdAsync(scopeId, ct);
+    }
+
     public async Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default)
     {
         if (role is UserRole.Admin or UserRole.SuperAdmin)

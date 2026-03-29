@@ -15,6 +15,8 @@ public interface IKnowledgeScopeService
 
     Task<bool> HasAccessAsync(Guid scopeId, UserRole role, CancellationToken ct = default);
 
+    Task<bool> HasScopeIdAsync(Guid scopeId, CancellationToken ct = default);
+
     Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default);
 
     Task RemoveByIds(Guid[] ids, CancellationToken ct = default);

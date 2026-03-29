@@ -35,6 +35,13 @@ public class KnowledgeScopeRepository(IMongoDatabase database) : MongoBaseReposi
         return await this.collection.CountDocumentsAsync(filter, cancellationToken: ct) > 0;
     }
 
+    public async Task<bool> HasScopeIdAsync(Guid scopeId, CancellationToken ct = default)
+    {
+        var filter = Builders<KnowledgeScope>.Filter.Eq(x => x.Id, scopeId);
+
+        return await this.collection.CountDocumentsAsync(filter, cancellationToken: ct) > 0;
+    }
+
     public async Task UpdateRolesAsync(Guid scopeId, UserRole[] addingRoles, UserRole[] removingRoles, CancellationToken ct = default)
     {
         var updates = new List<UpdateDefinition<KnowledgeScope>>();

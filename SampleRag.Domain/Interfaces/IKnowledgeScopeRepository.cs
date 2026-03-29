@@ -11,6 +11,8 @@ public interface IKnowledgeScopeRepository : IFilterRepository<Guid, KnowledgeSc
 {
     Task<bool> HasAccessAsync(Guid scopeId, UserRole role, CancellationToken ct = default);
 
+    Task<bool> HasScopeIdAsync(Guid scopeId, CancellationToken ct = default);
+
     Task UpdateRolesAsync(Guid scopeId, UserRole[] addingRoles, UserRole[] removingRoles, CancellationToken ct = default);
 
     Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default);
