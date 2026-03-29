@@ -7,13 +7,26 @@ public class LocalFileRepository(FilesStorageSettings config) : IFileRepository
 {
     public async Task<string> SaveAsync(string directoryPath, string fileName, string data)
     {
-        var result = Path.Combine(Path.Combine("assets", "documents"), fileName);
+        var result = Path.Combine(directoryPath, fileName);
         var path = Path.Combine(config.BasePath, result);
 
-        path = Path.Combine(config.BasePath, path);
+        this.EnsureDirectoryExist(path);
+
         await File.WriteAllBytesAsync(path, Convert.FromBase64String(data));
 
         return result;
+    }
+
+    public Task<string> MoveAsync(string oldFilePath, string newFilePath)
+    {
+        var fullOldPath = Path.Combine(config.BasePath, oldFilePath);
+        var fullNewPath = Path.Combine(config.BasePath, newFilePath);
+
+        this.EnsureDirectoryExist(Path.GetDirectoryName(fullNewPath) ?? string.Empty);
+
+        File.Move(fullOldPath, fullNewPath);
+
+        return Task.FromResult(newFilePath);
     }
 
     public async Task<Stream?> GetAsync(string directoryPath, string fileName)
@@ -31,5 +44,13 @@ public class LocalFileRepository(FilesStorageSettings config) : IFileRepository
         memoryStream.Position = 0;
 
         return memoryStream;
+    }
+
+    private void EnsureDirectoryExist(string directoryPath)
+    {
+        if (!Directory.Exists(directoryPath))
+        {
+            Directory.CreateDirectory(directoryPath);
+        }
     }
 }

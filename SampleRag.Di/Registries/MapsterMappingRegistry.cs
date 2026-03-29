@@ -64,6 +64,10 @@ public static class MapsterMappingRegistry
             .Map(dest => dest.NewChatId, src => src.Id)
             .Compile();
 
+        TypeAdapterConfig.GlobalSettings.NewConfig<CreateScopeRequest, KnowledgeScope>()
+            .Map(dest => dest.Roles, src => src.AddingRoles)
+            .Compile();
+
         TypeAdapterConfig.GlobalSettings.NewConfig<ClaimsPrincipal, string>()
             .MapWith(src => GetUserId(src))
             .Compile();

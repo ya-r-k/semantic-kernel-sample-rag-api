@@ -6,5 +6,5 @@ public class CreateScopeRequest
 {
     public string Name { get; set; } = null!;
 
-    public UserRole[] Roles { get; set; } = null!;
+    public UserRole[] AddingRoles { get; set; } = null!;
 }

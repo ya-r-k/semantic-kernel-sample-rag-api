@@ -24,7 +24,7 @@ public static class MessagesEndpoints
             return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, userId));
         })
             .RequireRateLimiting("send-message")
-            .AddEndpointFilter<KnowledgeScopeAccessFilter>()
+            .AddEndpointFilter<BodyScopeAccessFilter>()
             .Produces<MessagePartResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)

@@ -1,4 +1,6 @@
 using System.Linq.Expressions;
+using Mapster;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Models.Abstractions;
@@ -36,7 +38,38 @@ public class MongoBaseRepository<TEntity>(IMongoDatabase database) : IRepository
                 Builders<TEntity>.Filter.Eq(e => e.Id, item.Id),
                 item)).ToList();
 
-        await this.collection.BulkWriteAsync(bulkOps, cancellationToken: ct);
+        if (bulkOps.Count > 0)
+        {
+            await this.collection.BulkWriteAsync(bulkOps, cancellationToken: ct);
+        }
+    }
+
+    public async Task PartialUpdateAsync(Dictionary<string, object?>[] items, CancellationToken ct = default)
+    {
+        var bulkOps = new List<UpdateOneModel<TEntity>>();
+
+        foreach (var item in items)
+        {
+            var updateFields = item
+                .Where(x => x.Key != nameof(IEntity<>.Id))
+                .Where(x => x.Value != null)
+                .Select(x => Builders<TEntity>.Update.Set(x.Key, x.Value))
+                .ToArray();
+
+            if (updateFields.Length == 0)
+            {
+                continue;
+            }
+
+            var filter = Builders<TEntity>.Filter.Eq("_id", item[nameof(IEntity<>.Id)].Adapt<Guid>());
+
+            bulkOps.Add(new UpdateOneModel<TEntity>(filter, Builders<TEntity>.Update.Combine(updateFields)));
+        }
+
+        if (bulkOps.Count > 0)
+        {
+            await this.collection.BulkWriteAsync(bulkOps, cancellationToken: ct);
+        }
     }
 
     public async Task SetFieldValueAsync<T>(Expression<Func<TEntity, T>> fieldSelector, T value)

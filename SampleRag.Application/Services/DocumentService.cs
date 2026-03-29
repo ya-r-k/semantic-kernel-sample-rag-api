@@ -11,16 +11,16 @@ public class DocumentService(
     IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository,
     IFileRepository fileRepository) : IDocumentService
 {
-    public async Task<IEnumerable<Document>> AddAsync(params UploadDocumentRequestModel[] items)
+    public async Task<Document?> AddAsync(UploadDocumentRequestModel request)
     {
-        var savingData = items.Adapt<Document[]>();
+        var savingData = request.Adapt<Document>();
 
-        for (var i = 0; i < savingData.Length; i++)
-        {
-            savingData[i].LocalLink = await fileRepository.SaveAsync(Path.Combine("assets", "documents"), items[i].File.FileName, items[i].File.Content);
-        }
+        savingData.LocalLink = await fileRepository.SaveAsync(
+            Path.Combine("assets", "documents", request.ScopeId.ToString()),
+            request.File.FileName,
+            request.File.Content);
 
-        return await documentsRepository.AddAsync(savingData);
+        return (await documentsRepository.AddAsync([savingData])).FirstOrDefault();
     }
 
     public async Task<IEnumerable<Document>> GetBatchByAsync(GetDocumentsByModel model)
@@ -33,6 +33,40 @@ public class DocumentService(
         return await documentsRepository.GetByIdsAsync(ids);
     }
 
+    public async Task UpdateAsync(Document[] items, string[] fields)
+    {
+        var itemIds = items.Select(x => x.Id).ToArray();
+        var existingDocs = await this.GetByIdsAsync(itemIds);
+        var existingById = existingDocs.ToDictionary(
+            doc => doc.Id.ToString(),
+            StringComparer.OrdinalIgnoreCase);
+
+        var transformedItems = new List<Dictionary<string, object?>>();
+
+        foreach (var item in items)
+        {
+            var itemDict = item.Adapt<Dictionary<string, object?>>()
+                .Where(kvp => fields.Contains(kvp.Key))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            if (existingById.TryGetValue(item.Id.ToString(), out var existingDoc))
+            {
+                var newFilePath = Path.Combine(
+                    "assets",
+                    "documents",
+                    item.ScopeId.ToString(),
+                    Path.GetFileName(existingDoc.LocalLink));
+                itemDict[nameof(Document.LocalLink)] = newFilePath;
+
+                await fileRepository.MoveAsync(existingDoc.LocalLink, newFilePath);
+            }
+
+            transformedItems.Add(itemDict);
+        }
+
+        await documentsRepository.PartialUpdateAsync([.. transformedItems]);
+    }
+
     public async Task RemoveAllChunksAsync(CancellationToken ct = default)
     {
         await documentsRepository.SetFieldValueAsync(x => x.IsChunked, false);
@@ -42,10 +76,5 @@ public class DocumentService(
     public Task RemoveByIdsAsync(params Guid[] ids)
     {
         return documentsRepository.RemoveByIdsAsync(ids);
-    }
-
-    public Task UpdateAsync(params Document[] items)
-    {
-        return documentsRepository.UpdateAsync(items);
     }
 }

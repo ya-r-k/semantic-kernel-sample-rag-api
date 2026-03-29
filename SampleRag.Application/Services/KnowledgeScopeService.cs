@@ -32,14 +32,12 @@ public class KnowledgeScopeService(
 
     public async Task<IEnumerable<KnowledgeScope>> AddAsync(IEnumerable<CreateScopeRequest> items, CancellationToken ct = default)
     {
-        var scopes = items.Adapt<KnowledgeScope[]>();
-
-        return await scopeRepository.AddAsync(scopes, ct);
+        return await scopeRepository.AddAsync(items.Adapt<KnowledgeScope[]>(), ct);
     }
 
-    public async Task UpdateRolesAsync(Guid scopeId, UserRole[] addingRoles, UserRole[] removingRoles, CancellationToken ct)
+    public async Task PartialUpdateAsync(Guid scopeId, UpdateScopeRequest request, CancellationToken ct)
     {
-        await scopeRepository.UpdateRolesAsync(scopeId, addingRoles, removingRoles, ct);
+        await scopeRepository.PartialUpdateAsync(scopeId, request, ct);
     }
 
     public async Task RemoveByIds(Guid[] ids, CancellationToken ct = default)
