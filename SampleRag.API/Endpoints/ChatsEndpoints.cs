@@ -27,7 +27,7 @@ public static class ChatsEndpoints
                 ? Results.Created($"/api/chats/{created.Id}", created)
                 : Results.StatusCode(StatusCodes.Status500InternalServerError);
         })
-            .AddEndpointFilter<ScopeUserAccessFilter>()
+            .AddEndpointFilter<KnowledgeScopeAccessFilter>()
             .Produces<Chat>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)

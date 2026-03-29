@@ -1,4 +1,5 @@
 using SampleRag.Domain.Entities;
+using SampleRag.Domain.Models.Enums;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Domain.Interfaces.Services;
@@ -10,13 +11,11 @@ public interface IKnowledgeScopeService
 {
     Task<IEnumerable<KnowledgeScope>> AddAsync(IEnumerable<CreateScopeRequest> items, CancellationToken ct = default);
 
-    Task AddUsersAsync(Guid id, string[] usersIds, CancellationToken ct);
+    Task UpdateRolesAsync(Guid scopeId, UserRole[] addingRoles, UserRole[] removingRoles, CancellationToken ct = default);
 
-    Task<bool> HasAccessAsync(Guid scopeId, string userId, CancellationToken ct = default);
+    Task<bool> HasAccessAsync(Guid scopeId, UserRole role, CancellationToken ct = default);
 
-    Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, CancellationToken ct = default);
-
-    Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, string userId, CancellationToken ct = default);
+    Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default);
 
     Task RemoveByIds(Guid[] ids, CancellationToken ct = default);
 }
