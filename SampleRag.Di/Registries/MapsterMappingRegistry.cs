@@ -70,7 +70,7 @@ public static class MapsterMappingRegistry
 
         TypeAdapterConfig.GlobalSettings.NewConfig<(CreateChatRequest request, ClaimsPrincipal claims), Chat>()
             .MapWith(src => src.request.Adapt<Chat>())
-            .Map(dest => dest.OwnerIds, src => src.request.OwnerIds.Append(src.claims.Adapt<string>()))
+            .Map(dest => dest.OwnerId, src => src.request.UsersIds.Append(src.claims.Adapt<string>()))
             .Compile();
 
         TypeAdapterConfig.GlobalSettings.NewConfig<(CreateScopeRequest scope, ClaimsPrincipal claims), CreateScopeRequest>()

@@ -3,6 +3,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using SampleRag.Application.Factories;
+using SampleRag.Application.Filters.Invocation;
+using SampleRag.Application.Filters.Render;
 using SampleRag.Application.Plugins;
 using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
@@ -27,10 +29,9 @@ public static class SemanticKernelRegistry
         kernelBuilder.Plugins
             .AddFromType<TimePlugin>()
             .AddFromType<RetrievalPlugin>();
+        //.AddFromPromptDirectory("", "", new KernelPromptTemplateFactory());
 
         services.ConfigurePromptExecutionSettings();
-
-        // Configures Semantic Memory
         services.ConfigureGenerators();
     }
 
@@ -45,15 +46,21 @@ public static class SemanticKernelRegistry
         services.AddSingleton(sp =>
         {
             var kernel = sp.GetRequiredService<Kernel>();
-            var plugins = kernel.Plugins.ToArray();
+            var transformedFunctions = kernel.Plugins
+                .SelectMany(plugin => plugin.Select(f =>
+                    KernelFunctionFactory.CreateFromMethod(
+                        method: async (Kernel kernel, KernelFunction currentFunction, KernelArguments currentArgs, CancellationToken cancellationToken) =>
+                        {
+                            return await currentFunction.InvokeAsync(kernel, currentArgs, cancellationToken);
+                        },
+                        functionName: f.Name,
+                        description: f.Description,
+                        parameters: [.. f.Metadata.Parameters.Where(p => p.Name != "scopeId")],
+                        returnParameter: f.Metadata.ReturnParameter))).ToArray();
 
-            var transformedFunctionsOptions = CreateKernelFunctionsOptions(
-                plugins,
-                parameter => parameter.Name != "scopeId");
-
-            return new Dictionary<string, ImmutableDictionary<KernelFunction, KernelFunctionFromMethodOptions>>
+            return new Dictionary<string, KernelFunction[]>
             {
-                ["naive-rag"] = transformedFunctionsOptions.ToImmutableDictionary(),
+                ["naive-rag"] = transformedFunctions,
             }.ToImmutableDictionary();
         });
 

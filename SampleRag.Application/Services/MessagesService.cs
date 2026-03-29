@@ -14,7 +14,7 @@ public class MessagesService(
     IChatService chatService,
     IFilterRepository<Guid, Message, GetMessagesByModel> messagesRepository) : IMessagesService
 {
-    public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string userId)
+    public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string role, string userId)
     {
         var userMessage = message.Adapt<Message>();
         if (userMessage.ChatId == Guid.Empty)
@@ -22,7 +22,7 @@ public class MessagesService(
             var newChat = new Chat
             {
                 Name = string.Concat(message.Text.Take(80)),
-                OwnerIds = [userId],
+                OwnerId = userId,
             };
 
             var createdChats = await chatService.AddAsync(newChat);
@@ -62,10 +62,12 @@ public class MessagesService(
             ChatId = userMessage.ChatId,
         };
 
-        var outerArgs = new Dictionary<string, object>
+        var outerArgs = new Dictionary<string, object>();
+        if (userMessage.ScopeId.HasValue)
         {
-            ["scopeId"] = Guid.NewGuid(),
-        };
+            outerArgs["scopeId"] = userMessage.ScopeId.Value;
+        }
+
         var aiTextBuilder = new StringBuilder();
         await foreach (var part in dataGenerator.GenerateStreamingData(messagesHistory.Append(userMessage), "naive-rag", outerArgs))
         {

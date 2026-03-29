@@ -1,32 +1,21 @@
+using System.Collections.Immutable;
 using Microsoft.SemanticKernel;
 using SampleRag.Domain.Interfaces.Factories;
-using FunctionsOptionsPairs = System.Collections.Immutable.ImmutableDictionary<
-    Microsoft.SemanticKernel.KernelFunction,
-    Microsoft.SemanticKernel.KernelFunctionFromMethodOptions
->;
-using FunctionsSettings = System.Collections.Immutable.ImmutableDictionary<
-    string,
-    System.Collections.Immutable.ImmutableDictionary<
-        Microsoft.SemanticKernel.KernelFunction,
-        Microsoft.SemanticKernel.KernelFunctionFromMethodOptions
-    >
->;
 
 namespace SampleRag.Application.Factories;
 
 public class PromptExecutionSettingsFactory(
-    FunctionsSettings kernelFunctionsOptions) : ISettingsFactory<PromptExecutionSettings>
+    ImmutableDictionary<string, KernelFunction[]> kernelFunctionsOptions) : ISettingsFactory<PromptExecutionSettings>
 {
     public PromptExecutionSettings GetSettings(string settingsName, IDictionary<string, object>? outerArguments = default)
     {
-        kernelFunctionsOptions.TryGetValue(settingsName, out var currentFunctionsOptions);
+        kernelFunctionsOptions.TryGetValue(settingsName, out var functions);
 
         var result = new PromptExecutionSettings();
 
-        if (currentFunctionsOptions is not null && !currentFunctionsOptions.IsEmpty)
+        if (functions is not null && functions.Length > 0)
         {
-            var transformedFunctions = CreateFunctionWithParameters(currentFunctionsOptions, outerArguments);
-            result.FunctionChoiceBehavior = FunctionChoiceBehavior.Required(transformedFunctions);
+            result.FunctionChoiceBehavior = FunctionChoiceBehavior.Required(functions);
         }
         else
         {
@@ -36,7 +25,7 @@ public class PromptExecutionSettingsFactory(
         return result;
     }
 
-    private static KernelFunction[] CreateFunctionWithParameters(FunctionsOptionsPairs functionsOptionsPairs, IDictionary<string, object>? outerArgs = default)
+    /*private static KernelFunction[] CreateFunctionWithParameters(FunctionsOptionsPairs functionsOptionsPairs, IDictionary<string, object>? outerArgs = default)
     {
         var result = new List<KernelFunction>();
 
@@ -59,5 +48,5 @@ public class PromptExecutionSettingsFactory(
         }
 
         return [.. result];
-    }
+    }*/
 }

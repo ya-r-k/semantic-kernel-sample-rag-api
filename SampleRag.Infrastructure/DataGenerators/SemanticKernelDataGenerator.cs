@@ -3,6 +3,7 @@ using Mapster;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.TextGeneration;
+using SampleRag.Application.Filters.Invocation;
 using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Factories;
@@ -43,6 +44,8 @@ public class SemanticKernelDataGenerator(
         var chat = messages.Adapt<ChatHistory>();
         var chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
 
+        this.AddFilters(outerArguments);
+
         await foreach (var content in chatCompletion.GetStreamingChatMessageContentsAsync(chat, settingsFactory.GetSettings(executionSettingsName, outerArguments), kernel, cancellationToken: ct))
         {
             var result = content.Adapt<MessagePartResponse>();
@@ -69,6 +72,14 @@ public class SemanticKernelDataGenerator(
             }
 
             yield return result;
+        }
+    }
+
+    private void AddFilters(IDictionary<string, object>? outerArguments = default)
+    {
+        if (outerArguments is not null && outerArguments.Count > 0)
+        {
+            kernel.FunctionInvocationFilters.Add(new NonAiArgumentsApplyingFilter(outerArguments));
         }
     }
 }

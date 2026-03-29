@@ -54,22 +54,17 @@ public static class ChatsEndpoints
                 return Results.NotFound();
             }
 
-            if (chat.OwnerIds is null || !chat.OwnerIds.Contains(callerUserId))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
             if (string.IsNullOrWhiteSpace(request.UserId))
             {
                 return Results.BadRequest("UserId is required.");
             }
 
-            if (chat.OwnerIds.Contains(request.UserId))
+            if (chat.OwnerId.Contains(request.UserId))
             {
                 return Results.NoContent();
             }
 
-            chat.OwnerIds = [.. chat.OwnerIds, request.UserId];
+            chat.OwnerId = chat.OwnerId;
             await chatService.UpdateAsync(chat);
 
             return Results.NoContent();

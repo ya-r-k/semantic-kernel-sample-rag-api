@@ -9,6 +9,8 @@ public class Message : IEntity<Guid>
 
     public Guid ChatId { get; set; }
 
+    public Guid? ScopeId { get; set; }
+
     public string? Text { get; set; }
 
     public bool AiGenerated { get; set; }

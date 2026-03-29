@@ -18,8 +18,9 @@ public static class MessagesEndpoints
         group.MapPost("/", ([FromBody] SendMessageRequest message, IMessagesService messagesService, ClaimsPrincipal user) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+            var role = user.FindFirstValue(ClaimTypes.Role) ?? user.FindFirstValue("roles");
 
-            return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, userId));
+            return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, role, userId));
         })
             .RequireRateLimiting("send-message")
             .Produces<MessagePartResponse>(StatusCodes.Status200OK)
