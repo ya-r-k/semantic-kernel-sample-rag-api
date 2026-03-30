@@ -25,6 +25,7 @@ public static class MongoPersistanceRegistry
         {
             cm.AutoMap();
             cm.MapProperty(x => x.Vector).SetShouldSerializeMethod(_ => false);
+            cm.MapProperty(x => x.ScopeIdValue).SetShouldSerializeMethod(_ => false);
         });
         services.AddSingleton(new MongoClient(dbSettings.ConnectionString).GetDatabase(dbSettings.DatabaseName));
 

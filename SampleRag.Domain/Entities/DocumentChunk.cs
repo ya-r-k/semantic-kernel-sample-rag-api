@@ -18,5 +18,17 @@ public class DocumentChunk : IVectorEntity<Guid, float>, IEntity<Guid>
 
     public bool IsVectorized { get; set; }
 
+    public string DocumentIdValue
+    {
+        get => this.DocumentId.ToString();
+        set => DocumentId = Guid.Parse(value);
+    }
+
+    public string ScopeIdValue
+    {
+        get => this.ScopeId.ToString();
+        set => ScopeId = Guid.Parse(value);
+    }
+
     public ReadOnlyMemory<float> Vector { get; set; }
 }

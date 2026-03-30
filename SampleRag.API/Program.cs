@@ -43,7 +43,7 @@ var vectorDbSettings = builder.Configuration.GetSection(nameof(VectorDbSettings)
 var lmConfig = builder.Configuration.GetSection(nameof(GenAiProviderSettings)).Get<GenAiProviderSettings>() ?? new ();
 
 builder.Services.ConfigureMongoDb(dbSettings);
-//builder.Services.ConfigureQuartzJobs(dbSettings, jobsSettings);
+builder.Services.ConfigureQuartzJobs(dbSettings, jobsSettings);
 builder.Services.ConfigureKernel(lmConfig);
 builder.Services.ConfigureQdrant(vectorDbSettings);
 builder.Services.ConfigureLocalFilesPersistance(builder.Environment.WebRootPath);

@@ -13,9 +13,6 @@ public class RetrievalPlugin(IDocumentChunkService chunkService)
         Guid scopeId,
         [Description("ai-decomposed aspect of complex user request - NOT raw user input")] string subQuery)
     {
-        /*var sources = await chunkService.RetrieveChunksAsync(scopeId, subQuery);
-
-        return sources;*/
-        return await chunkService.RetrieveChunksAsync(subQuery);
+        return await chunkService.RetrieveChunksAsync(scopeId, subQuery);
     }
 }
