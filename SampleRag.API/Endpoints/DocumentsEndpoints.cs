@@ -33,16 +33,17 @@ public static class DocumentsEndpoints
             .Accepts<UploadDocumentRequestModel>("application/json");
 
         group.MapPut("/", async (
-            [FromBody] UpdateDocumentRequestModel[] request,
+            [FromBody] UpdateDocumentRequestModel request,
             IDocumentService documentsService,
             CancellationToken ct) =>
         {
             await documentsService.UpdateAsync(
-                request.Adapt<Document[]>(),
+                [request.Adapt<Document>()],
                 [nameof(Document.Id), nameof(Document.Name), nameof(Document.ScopeId), nameof(Document.OriginalLink)]);
 
             return Results.NoContent();
         })
+            .AddEndpointFilter<BodyScopeAccessFilter>()
             .Produces(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)
