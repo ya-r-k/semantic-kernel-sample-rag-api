@@ -15,6 +15,11 @@ public class KnowledgeScopeService(
         return await scopeRepository.HasAccessAsync(scopeId, role, ct);
     }
 
+    public async Task<bool> HasScopeIdAsync(Guid scopeId, CancellationToken ct = default)
+    {
+        return await scopeRepository.HasScopeIdAsync(scopeId, ct);
+    }
+
     public async Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default)
     {
         if (role is UserRole.Admin or UserRole.SuperAdmin)
@@ -27,14 +32,12 @@ public class KnowledgeScopeService(
 
     public async Task<IEnumerable<KnowledgeScope>> AddAsync(IEnumerable<CreateScopeRequest> items, CancellationToken ct = default)
     {
-        var scopes = items.Adapt<KnowledgeScope[]>();
-
-        return await scopeRepository.AddAsync(scopes, ct);
+        return await scopeRepository.AddAsync(items.Adapt<KnowledgeScope[]>(), ct);
     }
 
-    public async Task UpdateRolesAsync(Guid scopeId, UserRole[] addingRoles, UserRole[] removingRoles, CancellationToken ct)
+    public async Task PartialUpdateAsync(Guid scopeId, UpdateScopeRequest request, CancellationToken ct)
     {
-        await scopeRepository.UpdateRolesAsync(scopeId, addingRoles, removingRoles, ct);
+        await scopeRepository.PartialUpdateAsync(scopeId, request, ct);
     }
 
     public async Task RemoveByIds(Guid[] ids, CancellationToken ct = default)

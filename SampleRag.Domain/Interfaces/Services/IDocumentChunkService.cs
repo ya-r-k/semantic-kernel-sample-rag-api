@@ -14,6 +14,8 @@ public interface IDocumentChunkService
 
     Task<IEnumerable<DocumentChunk>> RetrieveChunksAsync(string query, int topK = 5, CancellationToken ct = default);
 
+    Task<IEnumerable<DocumentChunk>> RetrieveChunksAsync(Guid scopeId, string query, int topK = 5, CancellationToken ct = default);
+
     Task RemoveAllAsync(CancellationToken ct = default);
 
     Task RemoveAllEmbeddingsAsync(CancellationToken ct = default);

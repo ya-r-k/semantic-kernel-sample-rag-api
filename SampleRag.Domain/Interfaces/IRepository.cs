@@ -9,7 +9,13 @@ public interface IRepository<TId, TEntity>
 {
     Task<IEnumerable<TEntity>> AddAsync(TEntity[] items, CancellationToken ct = default);
 
+    Task<IEnumerable<TEntity>> GetByIdsAsync(TId[] ids, CancellationToken ct = default);
+
+    Task<IEnumerable<TEntity>> GetBatchByAsync(Expression<Func<TEntity, bool>>? predicate, int? batchSize, CancellationToken ct = default);
+
     Task UpdateAsync(TEntity[] items, CancellationToken ct = default);
+
+    Task PartialUpdateAsync(Dictionary<string, object?>[] items, CancellationToken ct = default);
 
     Task SetFieldValueAsync<T>(Expression<Func<TEntity, T>> fieldSelector, T value)
         where T : unmanaged;
@@ -17,8 +23,4 @@ public interface IRepository<TId, TEntity>
     Task RemoveByIdsAsync(TId[] ids, CancellationToken ct = default);
 
     Task ClearAsync(CancellationToken ct = default);
-
-    Task<IEnumerable<TEntity>> GetByIdsAsync(TId[] ids, CancellationToken ct = default);
-
-    Task<IEnumerable<TEntity>> GetBatchByAsync(Expression<Func<TEntity, bool>>? predicate, int? batchSize, CancellationToken ct = default);
 }

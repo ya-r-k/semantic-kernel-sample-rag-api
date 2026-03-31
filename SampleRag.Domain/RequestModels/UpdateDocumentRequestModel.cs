@@ -1,12 +1,14 @@
 namespace SampleRag.Domain.RequestModels;
 
-public class UploadDocumentRequestModel
+public class UpdateDocumentRequestModel
 {
+    public Guid Id { get; set; }
+
     public string Name { get; set; } = null!;
 
     public Guid ScopeId { get; set; }
 
     public string OriginalLink { get; set; }
 
-    public FileDataRequestModel File { get; set; } = null!;
+    public bool IsChunked { get; set; }
 }

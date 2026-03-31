@@ -1,3 +1,4 @@
+using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.API.Filters;
 using SampleRag.Domain.Entities;
@@ -19,15 +20,30 @@ public static class DocumentsEndpoints
             IDocumentService documentsService,
             CancellationToken ct) =>
         {
-            var result = await documentsService.AddAsync(document);
-            var created = result.FirstOrDefault();
+            var created = await documentsService.AddAsync(document);
             return created is not null
-                ? Results.Created($"/api/documents/{created.Id}", created)
+                ? Results.Created($"/api/documents/filter/ids", created)
                 : Results.StatusCode(StatusCodes.Status500InternalServerError);
         })
             .AddEndpointFilter<DocumentUploadValidationFilter>()
             .AddEndpointFilter<FileValidationFilter>()
-            .AddEndpointFilter<KnowledgeScopeAccessFilter>()
+            .Produces(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Accepts<UploadDocumentRequestModel>("application/json");
+
+        group.MapPut("/", async (
+            [FromBody] UpdateDocumentRequestModel request,
+            IDocumentService documentsService,
+            CancellationToken ct) =>
+        {
+            await documentsService.UpdateAsync(
+                [request.Adapt<Document>()],
+                [nameof(Document.Id), nameof(Document.Name), nameof(Document.ScopeId), nameof(Document.OriginalLink)]);
+
+            return Results.NoContent();
+        })
+            .AddEndpointFilter<BodyScopeAccessFilter>()
             .Produces(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)

@@ -6,7 +6,7 @@ namespace SampleRag.Domain.Interfaces.Services;
 
 public interface IMessagesService
 {
-    IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string userId);
+    IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string ownerId);
 
     Task<IEnumerable<Message>> GetBatchByAsync(GetMessagesByModel model);
 }

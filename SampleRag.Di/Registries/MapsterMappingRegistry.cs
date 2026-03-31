@@ -64,6 +64,10 @@ public static class MapsterMappingRegistry
             .Map(dest => dest.NewChatId, src => src.Id)
             .Compile();
 
+        TypeAdapterConfig.GlobalSettings.NewConfig<CreateScopeRequest, KnowledgeScope>()
+            .Map(dest => dest.Roles, src => src.AddingRoles)
+            .Compile();
+
         TypeAdapterConfig.GlobalSettings.NewConfig<ClaimsPrincipal, string>()
             .MapWith(src => GetUserId(src))
             .Compile();
@@ -74,7 +78,7 @@ public static class MapsterMappingRegistry
 
         TypeAdapterConfig.GlobalSettings.NewConfig<(CreateChatRequest request, ClaimsPrincipal claims), Chat>()
             .MapWith(src => src.request.Adapt<Chat>())
-            .Map(dest => dest.OwnerIds, src => src.request.OwnerIds.Append(src.claims.Adapt<string>()))
+            .Map(dest => dest.OwnerId, src => src.request.UsersIds.Append(src.claims.Adapt<string>()))
             .Compile();
 
         return services;

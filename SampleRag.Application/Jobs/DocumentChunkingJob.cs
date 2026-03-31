@@ -1,4 +1,5 @@
 using Quartz;
+using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models.Configs;
 using SampleRag.Domain.RequestModels;
@@ -27,7 +28,7 @@ public class DocumentChunkingJob(
                 await documentChunkService.ChunkAsync(document);
             }
 
-            await documentService.UpdateAsync([.. documents]);
+            await documentService.UpdateAsync([.. documents], [nameof(Document.Id), nameof(Document.IsChunked)]);
         }
     }
 }

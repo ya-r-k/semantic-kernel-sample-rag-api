@@ -30,7 +30,6 @@
 
   <ItemGroup>
     <Folder Include="Middleware\" />
-    <Folder Include="wwwroot\assets\documents\" />
   </ItemGroup>
   
 </Project>

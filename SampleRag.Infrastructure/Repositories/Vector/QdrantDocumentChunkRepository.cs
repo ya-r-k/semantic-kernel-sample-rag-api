@@ -20,8 +20,8 @@ public class QdrantDocumentChunkRepository(
             Properties =
             [
                 new VectorStoreKeyProperty("Id", typeof(Guid)),
-
-                // new VectorStoreDataProperty("ScopeId", typeof(Guid)),
+                new VectorStoreDataProperty("ScopeIdValue", typeof(string)),
+                new VectorStoreDataProperty("PageNumber", typeof(int)),
                 new VectorStoreVectorProperty("Vector", typeof(ReadOnlyMemory<float>), dimensions: 1024)
                 {
                     DistanceFunction = DistanceFunction.CosineSimilarity,
@@ -68,6 +68,8 @@ public class QdrantDocumentChunkRepository(
 
     public async Task<IEnumerable<DocumentChunk>> RetrieveChunksAsync(Guid scopeId, string query, int topK = 5, CancellationToken ct = default)
     {
+        using var qdrantClient = new QdrantClient(new Uri(settings.Url));
+
         var queryEmbedding = await embeddingGenerator.GenerateAsync(
         [
             new DocumentChunk
@@ -76,17 +78,30 @@ public class QdrantDocumentChunkRepository(
             },
         ], cancellationToken: ct);
 
-        var result = await this.vectorCollection.SearchAsync(
-            new DocumentChunk
+        var filter = new Filter();
+        filter.Must.Add(new Condition()
+        {
+            Field = new FieldCondition
             {
-                Text = query,
-                Vector = queryEmbedding[0].Vector,
-            }, topK * 3, cancellationToken: ct).ToListAsync(cancellationToken: ct);
+                Key = nameof(DocumentChunk.ScopeIdValue),
+                Match = new Match
+                {
+                    Keyword = scopeId.ToString(),
+                },
+            },
+        });
 
-        return [.. result
-            .Select(x => x.Record)
-            .Where(c => c.ScopeId == scopeId)
-            .Take(topK)];
+        var result = await qdrantClient.SearchAsync(
+            "document-chunks",
+            queryEmbedding[0].Vector,
+            filter,
+            limit: (ulong)topK,
+            payloadSelector: new WithPayloadSelector
+            {
+                Enable = true,
+            }, cancellationToken: ct);
+
+        return ConvertScoredPointsToChunks(result);
     }
 
     public async Task RemoveByAsync(Guid documentId, CancellationToken ct = default)
@@ -117,5 +132,27 @@ public class QdrantDocumentChunkRepository(
         var vectorParams = oldCollection.Config.Params.VectorsConfig.Params;
 
         await qdrantClient.RecreateCollectionAsync("document-chunks", vectorParams, cancellationToken: ct);
+    }
+
+    private static List<DocumentChunk> ConvertScoredPointsToChunks(IEnumerable<ScoredPoint> scoredPoints)
+    {
+        var chunks = new List<DocumentChunk>();
+
+        foreach (var point in scoredPoints)
+        {
+            var payload = point.Payload;
+
+            var chunk = new DocumentChunk
+            {
+                Id = Guid.Parse(point.Id.Uuid),
+                //DocumentId = Guid.Parse(payload.GetValueOrDefault(nameof(DocumentChunk.DocumentIdValue), "").ToString()),
+                ScopeId = Guid.Parse(payload[nameof(DocumentChunk.ScopeIdValue)].StringValue),
+                PageNumber = (int)payload[nameof(DocumentChunk.PageNumber)].IntegerValue,
+            };
+
+            chunks.Add(chunk);
+        }
+
+        return chunks;
     }
 }

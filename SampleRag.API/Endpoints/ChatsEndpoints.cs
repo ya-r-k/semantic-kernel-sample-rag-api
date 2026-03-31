@@ -27,7 +27,7 @@ public static class ChatsEndpoints
                 ? Results.Created($"/api/chats/{created.Id}", created)
                 : Results.StatusCode(StatusCodes.Status500InternalServerError);
         })
-            .AddEndpointFilter<KnowledgeScopeAccessFilter>()
+            .AddEndpointFilter<BodyScopeAccessFilter>()
             .Produces<Chat>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)
@@ -54,22 +54,17 @@ public static class ChatsEndpoints
                 return Results.NotFound();
             }
 
-            if (chat.OwnerIds is null || !chat.OwnerIds.Contains(callerUserId))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
             if (string.IsNullOrWhiteSpace(request.UserId))
             {
                 return Results.BadRequest("UserId is required.");
             }
 
-            if (chat.OwnerIds.Contains(request.UserId))
+            if (chat.OwnerId.Contains(request.UserId))
             {
                 return Results.NoContent();
             }
 
-            chat.OwnerIds = [.. chat.OwnerIds, request.UserId];
+            chat.OwnerId = chat.OwnerId;
             await chatService.UpdateAsync(chat);
 
             return Results.NoContent();

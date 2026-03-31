@@ -16,7 +16,7 @@ public class Chat : IEntity<Guid>
     /// <summary>
     /// Gets or sets user identifiers who can send/receive and add owners (from token sub).
     /// </summary>
-    public string[] OwnerIds { get; set; } = [];
+    public string OwnerId { get; set; }
 
     /// <summary>
     /// Gets or sets legacy: kept for backward compatibility during migration.

@@ -3,6 +3,7 @@ using Mapster;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.TextGeneration;
+using SampleRag.Application.Filters.Invocation;
 using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Factories;
@@ -38,12 +39,14 @@ public class SemanticKernelDataGenerator(
         }
     }
 
-    public async IAsyncEnumerable<MessagePartResponse> GenerateStreamingData(IEnumerable<Message> messages, string executionSettingsName, [EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<MessagePartResponse> GenerateStreamingData(IEnumerable<Message> messages, string executionSettingsName, IDictionary<string, object>? outerArguments = default, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var chat = messages.Adapt<ChatHistory>();
         var chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
 
-        await foreach (var content in chatCompletion.GetStreamingChatMessageContentsAsync(chat, settingsFactory.GetSettings(executionSettingsName), kernel, cancellationToken: ct))
+        this.AddFilters(outerArguments);
+
+        await foreach (var content in chatCompletion.GetStreamingChatMessageContentsAsync(chat, settingsFactory.GetSettings(executionSettingsName, outerArguments), kernel, cancellationToken: ct))
         {
             var result = content.Adapt<MessagePartResponse>();
             if (content.Role.Equals(AuthorRole.Tool))
@@ -69,6 +72,14 @@ public class SemanticKernelDataGenerator(
             }
 
             yield return result;
+        }
+    }
+
+    private void AddFilters(IDictionary<string, object>? outerArguments = default)
+    {
+        if (outerArguments is not null && outerArguments.Count > 0)
+        {
+            kernel.FunctionInvocationFilters.Add(new NonAiArgumentsApplyingFilter(outerArguments));
         }
     }
 }

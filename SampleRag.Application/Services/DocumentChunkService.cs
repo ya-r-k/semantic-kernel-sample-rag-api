@@ -82,6 +82,13 @@ public class DocumentChunkService(
         return await dbRepository.GetByIdsAsync([.. chunks.Select(x => x.Id)]);
     }
 
+    public async Task<IEnumerable<DocumentChunk>> RetrieveChunksAsync(Guid scopeId, string query, int topK = 5, CancellationToken ct = default)
+    {
+        var chunks = await vectorRepository.RetrieveChunksAsync(scopeId, query, topK, ct);
+
+        return await dbRepository.GetByIdsAsync([.. chunks.Select(x => x.Id)]);
+    }
+
     private List<DocumentChunk> SplitPageText(string text, int pageNumber)
     {
         if (text.Length <= MaxCharsPerChunk)

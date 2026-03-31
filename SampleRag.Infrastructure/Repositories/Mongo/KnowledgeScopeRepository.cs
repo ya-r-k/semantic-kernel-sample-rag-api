@@ -35,17 +35,29 @@ public class KnowledgeScopeRepository(IMongoDatabase database) : MongoBaseReposi
         return await this.collection.CountDocumentsAsync(filter, cancellationToken: ct) > 0;
     }
 
-    public async Task UpdateRolesAsync(Guid scopeId, UserRole[] addingRoles, UserRole[] removingRoles, CancellationToken ct = default)
+    public async Task<bool> HasScopeIdAsync(Guid scopeId, CancellationToken ct = default)
+    {
+        var filter = Builders<KnowledgeScope>.Filter.Eq(x => x.Id, scopeId);
+
+        return await this.collection.CountDocumentsAsync(filter, cancellationToken: ct) > 0;
+    }
+
+    public async Task PartialUpdateAsync(Guid scopeId, UpdateScopeRequest request, CancellationToken ct = default)
     {
         var updates = new List<UpdateDefinition<KnowledgeScope>>();
-        if (addingRoles is not null && addingRoles.Length > 0)
+        if (!string.IsNullOrEmpty(request.Name))
         {
-            updates.Add(Builders<KnowledgeScope>.Update.AddToSetEach(x => x.Roles, addingRoles));
+            updates.Add(Builders<KnowledgeScope>.Update.Set(x => x.Name, request.Name));
         }
 
-        if (removingRoles is not null && removingRoles.Length > 0)
+        if (request.AddingRoles is not null && request.AddingRoles.Length > 0)
         {
-            updates.Add(Builders<KnowledgeScope>.Update.PullAll(x => x.Roles, removingRoles));
+            updates.Add(Builders<KnowledgeScope>.Update.AddToSetEach(x => x.Roles, request.AddingRoles));
+        }
+
+        if (request.RemovingRoles is not null && request.RemovingRoles.Length > 0)
+        {
+            updates.Add(Builders<KnowledgeScope>.Update.PullAll(x => x.Roles, request.RemovingRoles));
         }
 
         if (updates.Count == 0)

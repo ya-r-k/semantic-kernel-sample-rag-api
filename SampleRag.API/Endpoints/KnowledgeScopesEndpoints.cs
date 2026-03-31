@@ -29,6 +29,20 @@ public static class KnowledgeScopesEndpoints
             .Produces<KnowledgeScope>(StatusCodes.Status201Created)
             .Accepts<CreateScopeRequest>("application/json");
 
+        group.MapPut("{id:guid}", async (
+            Guid id,
+            [FromBody] UpdateScopeRequest request,
+            IKnowledgeScopeService scopeService,
+            CancellationToken ct) =>
+        {
+            await scopeService.PartialUpdateAsync(id, request, ct);
+
+            return Results.NoContent();
+        })
+            .RequireAuthorization("RequireAdmin")
+            .Produces(StatusCodes.Status204NoContent)
+            .Accepts<UpdateScopeRequest>("application/json");
+
         group.MapPost("/filter", async (
             [FromBody] GetBatchByModel model,
             ClaimsPrincipal claims,
@@ -40,19 +54,5 @@ public static class KnowledgeScopesEndpoints
         })
             .Produces<IEnumerable<KnowledgeScope>>(StatusCodes.Status200OK)
             .Accepts<GetBatchByModel>("application/json");
-
-        group.MapPatch("{id:guid}/roles", async (
-            Guid id,
-            [FromBody] UpdateScopeRolesRequest body,
-            IKnowledgeScopeService scopeService,
-            CancellationToken ct) =>
-        {
-            await scopeService.UpdateRolesAsync(id, body.AddingRoles, body.RemovingRoles, ct);
-
-            return Results.NoContent();
-        })
-            .RequireAuthorization("RequireAdmin")
-            .Produces(StatusCodes.Status204NoContent)
-            .Accepts<UpdateScopeRolesRequest>("application/json");
     }
 }
