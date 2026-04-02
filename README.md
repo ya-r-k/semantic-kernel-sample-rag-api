@@ -1,96 +1,175 @@
-# Semantic Kernel C# Hello World Starter
+# SampleRag API
 
-The `sk-csharp-hello-world` console application demonstrates how to execute a semantic function.
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![Docker](https://img.shields.io/badge/docker-supported-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![RAG](https://img.shields.io/badge/RAG-Semantic%20Kernel-0A66C2)](https://learn.microsoft.com/semantic-kernel/)
 
-## Prerequisites
+Backend API for a scoped Retrieval-Augmented Generation (RAG) chat system built with ASP.NET Core, Semantic Kernel, Ollama, Qdrant, and MongoDB.
 
-- [.NET 6](https://dotnet.microsoft.com/download/dotnet/6.0) is required to run this starter.
-- Install the recommended extensions
-  - [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp)
-  - [Semantic Kernel Tools](https://marketplace.visualstudio.com/items?itemName=ms-semantic-kernel.semantic-kernel)
+## Table of Contents
 
-## Configuring the starter
+- [What This Project Does](#what-this-project-does)
+- [Why This Project Is Useful](#why-this-project-is-useful)
+- [How to Get Started](#how-to-get-started)
+- [How to Use the API](#how-to-use-the-api)
+- [Where to Get Help](#where-to-get-help)
+- [Who Maintains and Contributes](#who-maintains-and-contributes)
 
-The starter can be configured by using either:
+## What This Project Does
 
-- Enter secrets at the command line with [.NET Secret Manager](#using-net-secret-manager)
-- Enter secrets in [appsettings.json](#using-appsettingsjson)
+`SampleRag API` provides backend endpoints for:
 
-For Debugging the console application alone, we suggest using .NET [Secret Manager](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) to avoid the risk of leaking secrets into the repository, branches and pull requests.
+- JWT-authenticated chat and message flows
+- Document upload and ingestion for RAG
+- Vector search with Qdrant and embeddings from Ollama
+- Knowledge scopes for access control
+- Message feedback capture
 
-### Using .NET [Secret Manager](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets)
+Main API route groups:
 
-Configure an OpenAI endpoint
+- `api/auth` (development login helper)
+- `api/chats`
+- `api/messages`
+- `api/documents`
+- `api/files`
+- `api/knowledgescopes`
+- `api/feedbacks`
 
-```powershell
-cd sk-csharp-hello-world
-dotnet user-secrets set "serviceType" "OpenAI"
-dotnet user-secrets set "serviceId" "gpt-3.5-turbo"
-dotnet user-secrets set "modelId" "gpt-3.5-turbo"
-dotnet user-secrets set "apiKey" "... your OpenAI key ..."
+Solution structure:
+
+- `SampleRag.API` - HTTP API and endpoint composition
+- `SampleRag.Application` - application logic and orchestration
+- `SampleRag.Domain` - entities, contracts, domain models
+- `SampleRag.Infrastructure` - persistence and external integrations
+- `SampleRag.Di` - dependency registration/configuration
+
+## Why This Project Is Useful
+
+- Scoped RAG: keep document access and chat context tied to knowledge scopes.
+- Practical local-first stack: run models with Ollama and vector DB with Qdrant.
+- API-first development: OpenAPI/Swagger enabled in development.
+- Production-oriented baseline: JWT auth, rate limiting, structured logging, style analysis.
+- Container-friendly: scripts for dependency containers and API container startup.
+
+## How to Get Started
+
+### Prerequisites
+
+- .NET 10 SDK
+- Docker Desktop (recommended for local dependencies)
+
+### 1) Clone repository
+
+```bash
+git clone https://github.com/ya-r-k/semantic-kernel-sample-rag-api
+cd semantic-kernel-sample-rag-api
 ```
 
-Configure an Azure OpenAI endpoint
-
-```powershell
-cd sk-csharp-hello-world
-dotnet user-secrets set "serviceType" "AzureOpenAI"
-dotnet user-secrets set "serviceId" "gpt-35-turbo"
-dotnet user-secrets set "deploymentId" "gpt-35-turbo"
-dotnet user-secrets set "modelId" "gpt-3.5-turbo"
-dotnet user-secrets set "endpoint" "https:// ... your endpoint ... .openai.azure.com/"
-dotnet user-secrets set "apiKey" "... your Azure OpenAI key ..."
-```
-
-Configure the Semantic Kernel logging level
-
-```powershell
-dotnet user-secrets set "LogLevel" 0
-```
-
-Log levels:
-
-- 0 = Trace
-- 1 = Debug
-- 2 = Information
-- 3 = Warning
-- 4 = Error
-- 5 = Critical
-- 6 = None
-
-### Using appsettings.json
-
-Configure an OpenAI endpoint
-
-1. Copy [settings.json.openai-example](./config/appsettings.json.openai-example) to `./Config/appsettings.json`
-1. Edit the file to add your OpenAI endpoint configuration
-
-Configure an Azure OpenAI endpoint
-
-1. Copy [settings.json.azure-example](./config/appsettings.json.azure-example) to `./Config/appsettings.json`
-1. Edit the file to add your Azure OpenAI endpoint configuration
-
-## Running the starter
-
-To run the console application just hit `F5`.
-
-To build and run the console application from the terminal use the following commands:
-
-```powershell
+### 2) (Optional) Restore and build project
+```bash
+dotnet restore
 dotnet build
-dotnet run
 ```
 
-## Troubleshooting
+### 3) (Optional) Verify configuration
 
-### Getting a 400 (BadRequest) and error "Azure.RequestFailedException: logprobs, best_of and echo parameters are not available on gpt-35-turbo model. Please remove the parameter and try again."
+Review `SampleRag.API/appsettings.json` and adjust if needed:
 
-A chat completion model (gpt-35-turbo) was set in serviceId/deploymentOrModelId while the kernel was configured to use a text completion model. The type of model used by the kernel can be configured with the endpointType secret. To fix, you can either:
+- `DbSettings:ConnectionString`
+- `VectorDbSettings:Url`
+- `GenAiProviderSettings:Url`
+- `GenAiProviderSettings:TextModel`
+- `GenAiProviderSettings:TextEmbeddingModel`
 
-- change endpointType to chat-completion
 
-```powershell
-dotnet user-secrets set "endpointType" "chat-completion"
+Default development URL: `http://localhost:5234`
+Swagger UI: `http://localhost:5234/swagger`
+
+### 4) (Optional) Start required dependencies
+
+Use `Scripts/docker.run-deps.bat` to launch:
+
+- MongoDB (`localhost:27017`)
+- Qdrant (`localhost:6334`)
+- Ollama (`localhost:11434`)
+
+The script also pulls default models used by this project:
+
+- `qwen3:4b`
+- `qwen3.5:0.8b`
+- `mxbai-embed-large:335m`
+
+
+### 5) Run the API in Docker
+
+Use `Scripts/docker.run-api.bat` to run Sample.RagApi in Docker. Starting `Scripts/docker.run-deps.bat` separately is unnecessary because it is already launched by `Scripts/docker.run-api.bat`.
+
+It builds and starts the API container on port `5234` and connects it to the shared `samplerag-net` network.
+
+## How to Use the API
+
+In `Development`, you can generate a short-lived token via:
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "userId": "admin-1",
+  "email": "admin@example.com",
+  "role": "Admin",
+  "password": "dev-only"
+}
 ```
 
-- change serviceId and deploymentOrModelId to a text completion service like "text-davinci-003": [See Using .NET Secret Manager](#using-net-secret-manager). Please note that the [text-davinci-003 model will be phased out in the future](https://techcommunity.microsoft.com/t5/azure-ai-services-blog/announcing-updates-to-azure-openai-service-models/ba-p/3866757).
+Then call protected endpoints with:
+
+```http
+Authorization: Bearer <jwt-token>
+```
+
+Example flow:
+
+1. Create scope: `POST /api/knowledgescopes`
+2. Upload document: `POST /api/documents`
+3. Create chat: `POST /api/chats` (or send first message directly)
+4. Send message (SSE): `POST /api/messages`
+5. Submit feedback: `POST /api/feedbacks`
+
+For request/response examples, see:
+
+- `specs/001-demo-rag-api/quickstart.md`
+- `specs/001-demo-rag-api/contracts/api-endpoints.md`
+
+## Where to Get Help
+
+- Start with Swagger UI in local development: `http://localhost:5234/swagger`
+- Implementation specs and endpoint contracts:
+  - `specs/001-demo-rag-api/`
+  - `specs/001-demo-rag-api/contracts/api-endpoints.md`
+- If you hit setup issues, open an issue in this repository with:
+  - runtime logs
+  - config deltas (without secrets)
+  - exact request sample
+
+## Who Maintains and Contributes
+
+This repository is maintained by project contributors.
+
+### Contributing
+
+- Fork the repository and create a feature branch.
+- Make focused changes with tests/verification where possible.
+- Run formatting and build checks before opening a PR:
+
+```bash
+dotnet format SampleRag.API.slnx
+dotnet build
+```
+
+- Open a pull request describing the problem, approach, and verification steps.
+
+### Notes
+
+- No dedicated `CONTRIBUTING.md` is currently present; use the workflow above.
+- No `LICENSE` file is currently present; add one before public distribution.
