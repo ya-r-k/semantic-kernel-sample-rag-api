@@ -14,14 +14,9 @@ public class Chat : IEntity<Guid>
     public Guid ScopeId { get; set; }
 
     /// <summary>
-    /// Gets or sets user identifiers who can send/receive and add owners (from token sub).
+    /// Gets or sets user identifier who can send/receive and add users (from token sub).
     /// </summary>
     public string OwnerId { get; set; }
 
-    /// <summary>
-    /// Gets or sets legacy: kept for backward compatibility during migration.
-    /// Prefer OwnerIds for new chats.
-    /// </summary>
-    [Obsolete("Use OwnerIds instead")]
-    public int[]? UsersIds { get; set; }
+    public string[] UsersIds { get; set; } = null!;
 }
