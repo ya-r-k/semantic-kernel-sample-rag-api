@@ -10,7 +10,7 @@ public class LocalFileRepository(FilesStorageSettings config) : IFileRepository
         var result = Path.Combine(directoryPath, fileName);
         var path = Path.Combine(config.BasePath, result);
 
-        this.EnsureDirectoryExist(path);
+        this.EnsureDirectoryExist(Path.GetDirectoryName(path) ?? string.Empty);
 
         await File.WriteAllBytesAsync(path, Convert.FromBase64String(data));
 
