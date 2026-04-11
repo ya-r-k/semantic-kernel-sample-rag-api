@@ -26,7 +26,8 @@ public static class SemanticKernelRegistry
 
         kernelBuilder.Plugins
             .AddFromType<TimePlugin>()
-            .AddFromType<RetrievalPlugin>();
+            .AddFromType<RetrievalPlugin>()
+            .AddFromPromptDirectoryYaml("Prompts", "TextAnalisys");
         //.AddFromPromptDirectory("", "", new KernelPromptTemplateFactory());
 
         services.ConfigurePromptExecutionSettings();
@@ -58,7 +59,7 @@ public static class SemanticKernelRegistry
 
             return new Dictionary<string, KernelFunction[]>
             {
-                ["naive-rag"] = transformedFunctions,
+                ["naive-rag"] = [.. transformedFunctions.Where(x => x.PluginName == nameof(TimePlugin) || x.PluginName == nameof(RetrievalPlugin))],
             }.ToImmutableDictionary();
         });
 

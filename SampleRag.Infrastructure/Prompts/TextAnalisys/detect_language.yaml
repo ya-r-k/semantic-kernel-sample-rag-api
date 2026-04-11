@@ -1,0 +1,20 @@
+name: detect_language
+template: |
+  Identify the primary natural language of the user text. Use the standard English name for that language only (e.g. English, Spanish, Turkish, Japanese), not a native endonym and not an ISO code.
+
+  User text:
+  {{input}}
+
+  Reply with nothing else: one JSON object in this exact shape, with no markdown fences and no extra keys or text:
+  {"language":"<English language name>"}
+description: Detect the language of input text; response is JSON with the language name in English.
+template_format: handlebars
+input_variables:
+  - name: input
+    description: The text to analyze.
+    is_required: true
+execution_settings:
+  default:
+    temperature: 0.0
+    max_tokens: 64
+    model_id: qwen3.5:0.8b
