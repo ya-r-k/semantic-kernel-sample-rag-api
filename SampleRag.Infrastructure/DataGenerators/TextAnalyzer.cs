@@ -9,35 +9,42 @@ public class TextAnalyzer(Kernel kernel) : ITextAnalyzer
 {
     public async Task<string> DetectLanguageAsync(string text)
     {
-        var args = new KernelArguments
+        var args = new KernelArguments()
         {
             ["input"] = text,
         };
 
         var result = await kernel.InvokeAsync("TextAnalisys", "detect_language", args);
-        return result.GetValue<string>() ?? string.Empty;
+        return result.ToString() ?? string.Empty;
     }
 
     public async Task<UserQueryComplexity> DetermineQueryComplexity(string query)
     {
-        var args = new KernelArguments
+        var args = new KernelArguments(new PromptExecutionSettings()
+        {
+            ModelId = "qwen3.5:0.8b",
+        })
         {
             ["input"] = query,
         };
 
         var result = await kernel.InvokeAsync("TextAnalisys", "detect_query_complexity", args);
-        return (result.GetValue<string>() ?? string.Empty).Adapt<UserQueryComplexity>();
+        var value = result.ToString() ?? string.Empty;
+        return value.Adapt<UserQueryComplexity>();
     }
 
     public async Task<string> TranslateText(string text, string targetLanguage)
     {
-        var args = new KernelArguments
+        var args = new KernelArguments(new PromptExecutionSettings()
+        {
+            ModelId = "qwen3.5:0.8b",
+        })
         {
             ["input"] = text,
             ["language"] = targetLanguage,
         };
 
         var result = await kernel.InvokeAsync("TextAnalisys", "translate", args);
-        return result.GetValue<string>() ?? string.Empty;
+        return result.ToString() ?? string.Empty;
     }
 }

@@ -1,4 +1,5 @@
 name: translate
+description: Translate input text into the requested language; response is plain translated text only.
 template: |
   Translate the following text into {{language}}. Preserve meaning, register, and tone. Do not add explanations, notes, or quotation marks around the result.
 
@@ -6,7 +7,6 @@ template: |
   {{input}}
 
   Output only the translated text, with no JSON and no surrounding labels.
-description: Translate input text into the requested language; response is plain translated text only.
 template_format: handlebars
 input_variables:
   - name: input
@@ -19,4 +19,4 @@ execution_settings:
   default:
     temperature: 0.2
     max_tokens: 2048
-    model_id: qwen3.5:0.8b
+#    model_id: qwen3.5:0.8b
