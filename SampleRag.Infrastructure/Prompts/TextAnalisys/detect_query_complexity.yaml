@@ -9,8 +9,7 @@ template: |
   User query:
   {{input}}
 
-  Reply with nothing else: one JSON object with no markdown fences and no extra keys or text. The only allowed values for complexity are the strings Simple and Complex (exact spelling and casing):
-  {"complexity":"Simple"}  or  {"complexity":"Complex"}
+  The only allowed values for complexity are the strings Simple and Complex (exact spelling and casing).
 template_format: handlebars
 input_variables:
   - name: input
@@ -19,5 +18,6 @@ input_variables:
 execution_settings:
   default:
     temperature: 0.0
-    max_tokens: 64
-#    model_id: qwen3.5:0.8b
+    max_tokens: 20
+    model_id: qwen3.5:0.8b
+    think: false

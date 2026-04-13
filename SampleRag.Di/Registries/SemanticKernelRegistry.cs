@@ -37,8 +37,6 @@ public static class SemanticKernelRegistry
                 new HandlebarsPromptTemplateFactory());
         }
 
-        //.AddFromPromptDirectory("", "", new KernelPromptTemplateFactory());
-
         services.ConfigurePromptExecutionSettings();
         services.ConfigureGenerators();
     }

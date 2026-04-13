@@ -16,7 +16,6 @@ public static class MessagesEndpoints
     {
         var group = routes.MapGroup("api/messages")
             .WithTags("Messages");
-        //.RequireAuthorization();
 
         group.MapPost("/complexity", async ([FromBody] string message, ITextAnalyzer textAnalyzer) =>
         {
@@ -34,6 +33,7 @@ public static class MessagesEndpoints
 
             return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, userId));
         })
+            .RequireAuthorization()
             .RequireRateLimiting("send-message")
             .AddEndpointFilter<BodyScopeAccessFilter>()
             .Produces<MessagePartResponse>(StatusCodes.Status200OK)
@@ -45,6 +45,7 @@ public static class MessagesEndpoints
         {
             return Results.Ok(await messageService.GetBatchByAsync(model));
         })
+            .RequireAuthorization()
             .Produces<Message>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Accepts<GetMessagesByModel>("application/json");
