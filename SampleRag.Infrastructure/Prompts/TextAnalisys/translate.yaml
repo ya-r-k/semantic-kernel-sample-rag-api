@@ -20,4 +20,4 @@ execution_settings:
     temperature: 0.2
     max_tokens: 2048
     model_id: qwen3.5:0.8b
-    think: true
+    think: false
