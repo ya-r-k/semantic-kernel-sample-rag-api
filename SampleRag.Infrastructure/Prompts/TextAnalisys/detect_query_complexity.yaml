@@ -1,0 +1,23 @@
+name: detect_query_complexity
+description: Classify user query complexity as Simple or Complex; response is JSON only.
+template: |
+  Classify the user's query into exactly one label.
+
+  Simple: A single, direct question or request that needs one straightforward answer or one clear action; little or no reasoning chain, no multi-part research, and no need to combine many constraints.
+  Complex: A query that is multi-step, open-ended, heavily conditional, or clearly needs substantial reasoning, synthesis, or breaking the problem into several subtasks.
+
+  User query:
+  {{input}}
+
+  The only allowed values for complexity are the strings Simple and Complex (exact spelling and casing).
+template_format: handlebars
+input_variables:
+  - name: input
+    description: The user query to classify.
+    is_required: true
+execution_settings:
+  default:
+    temperature: 0.0
+    max_tokens: 20
+    model_id: qwen3.5:0.8b
+    think: false

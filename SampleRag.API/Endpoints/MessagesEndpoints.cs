@@ -3,6 +3,7 @@ using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using SampleRag.API.Filters;
 using SampleRag.Domain.Entities;
+using SampleRag.Domain.Interfaces;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models;
 using SampleRag.Domain.RequestModels;
@@ -14,8 +15,17 @@ public static class MessagesEndpoints
     public static void MapMessagesEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("api/messages")
-            .WithTags("Messages")
-            .RequireAuthorization();
+            .WithTags("Messages");
+
+        group.MapPost("/complexity", async ([FromBody] string message, ITextAnalyzer textAnalyzer) =>
+        {
+            return Results.Ok(await textAnalyzer.DetermineQueryComplexity(message));
+        });
+
+        group.MapPost("/language", async ([FromBody] string message, ITextAnalyzer textAnalyzer) =>
+        {
+            return Results.Ok(await textAnalyzer.DetectLanguageAsync(message));
+        });
 
         group.MapPost("/", ([FromBody] SendMessageRequest message, IMessagesService messagesService, ClaimsPrincipal user) =>
         {
@@ -23,6 +33,7 @@ public static class MessagesEndpoints
 
             return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, userId));
         })
+            .RequireAuthorization()
             .RequireRateLimiting("send-message")
             .AddEndpointFilter<BodyScopeAccessFilter>()
             .Produces<MessagePartResponse>(StatusCodes.Status200OK)
@@ -34,6 +45,7 @@ public static class MessagesEndpoints
         {
             return Results.Ok(await messageService.GetBatchByAsync(model));
         })
+            .RequireAuthorization()
             .Produces<Message>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Accepts<GetMessagesByModel>("application/json");

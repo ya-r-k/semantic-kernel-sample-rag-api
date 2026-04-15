@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 using SampleRag.Application.Factories;
 using SampleRag.Application.Plugins;
 using SampleRag.Domain.Entities;
@@ -15,7 +16,7 @@ namespace SampleRag.Di.Registries;
 
 public static class SemanticKernelRegistry
 {
-    public static void ConfigureKernel(this IServiceCollection services, GenAiProviderSettings lmConfig)
+    public static void ConfigureKernel(this IServiceCollection services, GenAiProviderSettings lmConfig, AiPromptTemplatingSettings promptsConfig)
     {
         services.AddSingleton(lmConfig);
 
@@ -27,7 +28,14 @@ public static class SemanticKernelRegistry
         kernelBuilder.Plugins
             .AddFromType<TimePlugin>()
             .AddFromType<RetrievalPlugin>();
-        //.AddFromPromptDirectory("", "", new KernelPromptTemplateFactory());
+
+        foreach (var pluginPathPair in promptsConfig.PluginPathes)
+        {
+            kernelBuilder.Plugins.AddFromPromptDirectoryYaml(
+                Path.Combine(AppContext.BaseDirectory, pluginPathPair.Value),
+                pluginPathPair.Key,
+                new HandlebarsPromptTemplateFactory());
+        }
 
         services.ConfigurePromptExecutionSettings();
         services.ConfigureGenerators();
@@ -36,6 +44,8 @@ public static class SemanticKernelRegistry
     private static void ConfigureGenerators(this IServiceCollection services)
     {
         services.AddTransient<IDataGenerator, SemanticKernelDataGenerator>();
+        services.AddTransient<ITextAnalyzer, TextAnalyzer>();
+
         services.AddSingleton<IEmbeddingGenerator<DocumentChunk, Embedding<float>>, DocumentChunkEmbeddingGenerator>();
     }
 
@@ -58,7 +68,7 @@ public static class SemanticKernelRegistry
 
             return new Dictionary<string, KernelFunction[]>
             {
-                ["naive-rag"] = transformedFunctions,
+                ["naive-rag"] = [.. transformedFunctions.Where(x => x.PluginName == nameof(TimePlugin) || x.PluginName == nameof(RetrievalPlugin))],
             }.ToImmutableDictionary();
         });
 

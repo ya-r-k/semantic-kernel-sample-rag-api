@@ -41,10 +41,11 @@ var dbSettings = builder.Configuration.GetSection(nameof(DbSettings)).Get<DbSett
 var jobsSettings = builder.Configuration.GetSection(nameof(DocumentsJobsSettings)).Get<DocumentsJobsSettings>() ?? new ();
 var vectorDbSettings = builder.Configuration.GetSection(nameof(VectorDbSettings)).Get<VectorDbSettings>() ?? new ();
 var lmConfig = builder.Configuration.GetSection(nameof(GenAiProviderSettings)).Get<GenAiProviderSettings>() ?? new ();
+var promptsConfig = builder.Configuration.GetSection(nameof(AiPromptTemplatingSettings)).Get<AiPromptTemplatingSettings>() ?? new ();
 
 builder.Services.ConfigureMongoDb(dbSettings);
 builder.Services.ConfigureQuartzJobs(dbSettings, jobsSettings);
-builder.Services.ConfigureKernel(lmConfig);
+builder.Services.ConfigureKernel(lmConfig, promptsConfig);
 builder.Services.ConfigureQdrant(vectorDbSettings);
 builder.Services.ConfigureLocalFilesPersistance(builder.Environment.WebRootPath);
 
