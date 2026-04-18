@@ -97,6 +97,14 @@ public class MessagesService(
 
         await messagesRepository.AddAsync([userMessage, aiMessage]);
 
+        var chats = await chatService.GetByIdsAsync(userMessage.ChatId);
+        var chat = chats.FirstOrDefault();
+        if (chat is not null && aiMessage.CreatedAt.HasValue)
+        {
+            chat.LastUpdatedAt = aiMessage.CreatedAt;
+            await chatService.UpdateAsync(chat);
+        }
+
         yield return new MessagePartResponse
         {
             CreatedAt = aiMessage.CreatedAt,
