@@ -33,9 +33,14 @@ public static class ChatsEndpoints
             .Produces(StatusCodes.Status403Forbidden)
             .Accepts<CreateChatRequest>("application/json");
 
-        group.MapPost("/filter", async ([FromBody] GetChatsByModel model, IChatService chatService, CancellationToken ct) =>
+        group.MapPost("/filter", async ([FromBody] GetChatsByModel model, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
         {
-            return Results.Ok(await chatService.GetBatchByAsync(model));
+            var userId = claims.Adapt<string>();
+            var chats = await chatService.GetBatchByAsync(model);
+            var filtered = chats.Where(c =>
+                c.OwnerId == userId ||
+                (c.UsersIds != null && c.UsersIds.Contains(userId)));
+            return Results.Ok(filtered);
         })
             .Produces<Chat>(StatusCodes.Status200OK);
 

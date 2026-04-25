@@ -25,6 +25,7 @@ public static class MessagesEndpoints
         })
             .RequireRateLimiting("send-message")
             .AddEndpointFilter<BodyScopeAccessFilter>()
+            .AddEndpointFilter<ChatAccessFilter>()
             .Produces<MessagePartResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -36,6 +37,7 @@ public static class MessagesEndpoints
         })
             .Produces<Message>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
+            .AddEndpointFilter<ChatAccessFilter>()
             .Accepts<GetMessagesByModel>("application/json");
     }
 }

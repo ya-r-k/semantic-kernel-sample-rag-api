@@ -31,4 +31,16 @@ public class ChatService(IFilterRepository<Guid, Chat, GetChatsByModel> reposito
     {
         await repository.UpdateAsync(items);
     }
+    public async Task<bool> HasAccessAsync(Guid chatId, string userId, CancellationToken ct = default)
+    {
+        var chats = await repository.GetByIdsAsync(new[] { chatId }, ct);
+        var chat = chats.FirstOrDefault();
+        if (chat == null)
+            return false;
+        if (chat.OwnerId == userId)
+            return true;
+        if (chat.UsersIds != null && chat.UsersIds.Contains(userId))
+            return true;
+        return false;
+    }
 }
