@@ -9,6 +9,9 @@ public class ChatRepository(IMongoDatabase database) : MongoBaseRepository<Chat>
 {
     public async Task<IEnumerable<Chat>> GetBatchByAsync(GetChatsByModel filterModel)
     {
+        var sortDefinition = Builders<Chat>.Sort
+            .Descending(x => x.LastUpdatedAt)
+            .Descending(x => x.Id);
         var filterBuilder = Builders<Chat>.Filter;
         var filter = Builders<Chat>.Filter.Empty;
 
@@ -19,32 +22,8 @@ public class ChatRepository(IMongoDatabase database) : MongoBaseRepository<Chat>
 
         if (filterModel.LastId.HasValue)
         {
-            var anchor = await this.collection
-                .Find(filterBuilder.Eq(x => x.Id, filterModel.LastId.Value))
-                .FirstOrDefaultAsync();
-
-            if (anchor is not null)
-            {
-                if (anchor.LastUpdatedAt.HasValue)
-                {
-                    filter &= filterBuilder.Or(
-                        filterBuilder.Lt(x => x.LastUpdatedAt, anchor.LastUpdatedAt.Value),
-                        filterBuilder.And(
-                            filterBuilder.Eq(x => x.LastUpdatedAt, anchor.LastUpdatedAt.Value),
-                            filterBuilder.Lt(x => x.Id, anchor.Id)));
-                }
-                else
-                {
-                    filter &= filterBuilder.And(
-                        filterBuilder.Eq(x => x.LastUpdatedAt, null),
-                        filterBuilder.Lt(x => x.Id, anchor.Id));
-                }
-            }
+            filter &= filterBuilder.Where(x => x.Id > filterModel.LastId.Value);
         }
-
-        var sortDefinition = Builders<Chat>.Sort
-            .Descending(x => x.LastUpdatedAt)
-            .Descending(x => x.Id);
 
         var query = this.collection.Find(filter)
             .Sort(sortDefinition)
