@@ -19,4 +19,9 @@ public class Chat : IEntity<Guid>
     public string OwnerId { get; set; }
 
     public string[] UsersIds { get; set; } = null!;
+
+    /// <summary>
+    /// Last time the chat had a user message and AI reply; equals <see cref="Message.CreatedAt"/> of the latest AI message.
+    /// </summary>
+    public DateTime? LastUpdatedAt { get; set; }
 }
