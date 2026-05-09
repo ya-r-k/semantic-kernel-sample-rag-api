@@ -36,64 +36,10 @@ public static class ChatsEndpoints
         group.MapPost("/filter", async ([FromBody] GetChatsByModel model, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
         {
             var userId = claims.Adapt<string>();
-            var chats = await chatService.GetBatchByAsync(model);
-            var filtered = chats.Where(c =>
-                c.OwnerId == userId ||
-                (c.UsersIds != null && c.UsersIds.Contains(userId)));
-            return Results.Ok(filtered);
+            var chats = await chatService.GetBatchByAsync(model, userId, ct);
+
+            return Results.Ok(chats);
         })
             .Produces<Chat>(StatusCodes.Status200OK);
-
-        group.MapPost("{id:guid}/owners", async (Guid id, [FromBody] AddChatOwnerRequest request, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
-        {
-            var callerUserId = claims.FindFirstValue(ClaimTypes.NameIdentifier) ?? claims.FindFirstValue("sub");
-            if (string.IsNullOrEmpty(callerUserId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var chats = await chatService.GetByIdsAsync(id);
-            var chat = chats.FirstOrDefault();
-            if (chat is null)
-            {
-                return Results.NotFound();
-            }
-
-            if (string.IsNullOrWhiteSpace(request.UserId))
-            {
-                return Results.BadRequest("UserId is required.");
-            }
-
-            if (chat.OwnerId.Contains(request.UserId))
-            {
-                return Results.NoContent();
-            }
-
-            chat.OwnerId = chat.OwnerId;
-            await chatService.UpdateAsync(chat);
-
-            return Results.NoContent();
-        })
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound)
-            .Accepts<AddChatOwnerRequest>("application/json");
-
-        group.MapPatch("{id:guid}/name/generate", async (Guid id, IChatService chatService, CancellationToken ct) =>
-        {
-            throw new NotImplementedException();
-        })
-            .Produces<Chat>(StatusCodes.Status204NoContent);
-
-        group.MapDelete("{id:guid}", async (Guid id, IChatService chatService, CancellationToken ct) =>
-        {
-            await chatService.RemoveByIdsAsync(id);
-
-            return Results.NoContent();
-        })
-            .Produces<Chat>(StatusCodes.Status204NoContent)
-            .Accepts<Chat>("application/json");
     }
 }
