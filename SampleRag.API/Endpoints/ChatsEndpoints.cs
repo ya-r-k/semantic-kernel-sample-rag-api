@@ -41,5 +41,71 @@ public static class ChatsEndpoints
             return Results.Ok(chats);
         })
             .Produces<Chat>(StatusCodes.Status200OK);
+
+        group.MapPost("{id:guid}/owners", async (Guid id, [FromBody] AddChatOwnerRequest request, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
+        {
+            var callerUserId = claims.Adapt<string>();
+            if (string.IsNullOrWhiteSpace(callerUserId))
+            {
+                return Results.Unauthorized();
+            }
+
+            if (string.IsNullOrWhiteSpace(request.UserId))
+            {
+                return Results.BadRequest("UserId is required.");
+            }
+
+            var chats = await chatService.GetByIdsAsync(id);
+            var chat = chats.FirstOrDefault();
+            if (chat is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (chat.OwnerId != callerUserId)
+            {
+                return Results.Json(new { error = "Only chat owner can add participants." }, statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            if (request.UserId == chat.OwnerId)
+            {
+                return Results.NoContent();
+            }
+
+            if (chat.UsersIds == null)
+            {
+                chat.UsersIds = [];
+            }
+
+            if (!chat.UsersIds.Contains(request.UserId))
+            {
+                var nextUsers = new List<string>(chat.UsersIds) { request.UserId };
+                chat.UsersIds = nextUsers.ToArray();
+                await chatService.UpdateAsync(chat);
+            }
+
+            return Results.NoContent();
+        })
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Accepts<AddChatOwnerRequest>("application/json");
+
+        group.MapPatch("{id:guid}/name/generate", async (Guid id, IChatService chatService, CancellationToken ct) =>
+        {
+            throw new NotImplementedException();
+        })
+            .Produces<Chat>(StatusCodes.Status204NoContent);
+
+        group.MapDelete("{id:guid}", async (Guid id, IChatService chatService, CancellationToken ct) =>
+        {
+            await chatService.RemoveByIdsAsync(id);
+
+            return Results.NoContent();
+        })
+            .Produces<Chat>(StatusCodes.Status204NoContent)
+            .Accepts<Chat>("application/json");
     }
 }
