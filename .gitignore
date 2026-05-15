@@ -28,6 +28,9 @@
 
 # Bencharks artifacts
 **/BenchmarkDotNet.Artifacts
+# Postman
+**/postman/*
+**/.postman/*
 
 # Build results
 [Dd]ebug/

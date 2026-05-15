@@ -40,5 +40,6 @@ public static class MongoPersistanceRegistry
         services.AddTransient<IFilterRepository<Guid, Chat, GetChatsByModel>, ChatRepository>();
         services.AddTransient<IFilterRepository<Guid, Feedback, GetFeedbackByModel>, FeedbackRepository>();
         services.AddTransient<IKnowledgeScopeRepository, KnowledgeScopeRepository>();
+        services.AddTransient<IChatRepository, ChatRepository>();
     }
 }

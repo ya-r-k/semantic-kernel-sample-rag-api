@@ -33,18 +33,26 @@ public static class ChatsEndpoints
             .Produces(StatusCodes.Status403Forbidden)
             .Accepts<CreateChatRequest>("application/json");
 
-        group.MapPost("/filter", async ([FromBody] GetChatsByModel model, IChatService chatService, CancellationToken ct) =>
+        group.MapPost("/filter", async ([FromBody] GetChatsByModel model, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
         {
-            return Results.Ok(await chatService.GetBatchByAsync(model));
+            var userId = claims.Adapt<string>();
+            var chats = await chatService.GetBatchByAsync(model, userId, ct);
+
+            return Results.Ok(chats);
         })
             .Produces<Chat>(StatusCodes.Status200OK);
 
         group.MapPost("{id:guid}/owners", async (Guid id, [FromBody] AddChatOwnerRequest request, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
         {
-            var callerUserId = claims.FindFirstValue(ClaimTypes.NameIdentifier) ?? claims.FindFirstValue("sub");
-            if (string.IsNullOrEmpty(callerUserId))
+            var callerUserId = claims.Adapt<string>();
+            if (string.IsNullOrWhiteSpace(callerUserId))
             {
                 return Results.Unauthorized();
+            }
+
+            if (string.IsNullOrWhiteSpace(request.UserId))
+            {
+                return Results.BadRequest("UserId is required.");
             }
 
             var chats = await chatService.GetByIdsAsync(id);
@@ -54,18 +62,27 @@ public static class ChatsEndpoints
                 return Results.NotFound();
             }
 
-            if (string.IsNullOrWhiteSpace(request.UserId))
+            if (chat.OwnerId != callerUserId)
             {
-                return Results.BadRequest("UserId is required.");
+                return Results.Json(new { error = "Only chat owner can add participants." }, statusCode: StatusCodes.Status403Forbidden);
             }
 
-            if (chat.OwnerId.Contains(request.UserId))
+            if (request.UserId == chat.OwnerId)
             {
                 return Results.NoContent();
             }
 
-            chat.OwnerId = chat.OwnerId;
-            await chatService.UpdateAsync(chat);
+            if (chat.UsersIds == null)
+            {
+                chat.UsersIds = [];
+            }
+
+            if (!chat.UsersIds.Contains(request.UserId))
+            {
+                var nextUsers = new List<string>(chat.UsersIds) { request.UserId };
+                chat.UsersIds = nextUsers.ToArray();
+                await chatService.UpdateAsync(chat);
+            }
 
             return Results.NoContent();
         })

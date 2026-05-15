@@ -14,4 +14,8 @@ public interface IChatService
     Task<IEnumerable<Chat>> GetByIdsAsync(params Guid[] ids);
 
     Task<IEnumerable<Chat>> GetBatchByAsync(GetChatsByModel model);
+
+    Task<bool> HasAccessAsync(Guid chatId, string userId, CancellationToken ct = default);
+
+    Task<IEnumerable<Chat>> GetBatchByAsync(GetChatsByModel model, string userId, CancellationToken ct = default);
 }

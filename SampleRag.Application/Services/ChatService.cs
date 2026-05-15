@@ -5,7 +5,7 @@ using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Application.Services;
 
-public class ChatService(IFilterRepository<Guid, Chat, GetChatsByModel> repository) : IChatService
+public class ChatService(IChatRepository repository) : IChatService
 {
     public async Task<IEnumerable<Chat>> AddAsync(params Chat[] items)
     {
@@ -15,6 +15,11 @@ public class ChatService(IFilterRepository<Guid, Chat, GetChatsByModel> reposito
     public async Task<IEnumerable<Chat>> GetBatchByAsync(GetChatsByModel model)
     {
         return await repository.GetBatchByAsync(model);
+    }
+
+    public async Task<IEnumerable<Chat>> GetBatchByAsync(GetChatsByModel model, string userId, CancellationToken ct = default)
+    {
+        return await repository.GetBatchByAsync(model, userId, ct);
     }
 
     public async Task<IEnumerable<Chat>> GetByIdsAsync(params Guid[] ids)
@@ -30,5 +35,10 @@ public class ChatService(IFilterRepository<Guid, Chat, GetChatsByModel> reposito
     public async Task UpdateAsync(params Chat[] items)
     {
         await repository.UpdateAsync(items);
+    }
+
+    public async Task<bool> HasAccessAsync(Guid chatId, string userId, CancellationToken ct = default)
+    {
+        return await repository.HasAccessAsync(chatId, userId, ct);
     }
 }
