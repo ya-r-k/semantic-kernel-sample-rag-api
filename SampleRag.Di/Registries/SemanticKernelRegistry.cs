@@ -54,7 +54,7 @@ public static class SemanticKernelRegistry
         services.AddSingleton(sp =>
         {
             var kernel = sp.GetRequiredService<Kernel>();
-            var transformedFunctions = kernel.Plugins
+            /*var transformedFunctions = kernel.Plugins
                 .SelectMany(plugin => plugin.Select(f =>
                     KernelFunctionFactory.CreateFromMethod(
                         method: async (Kernel kernel, KernelFunction currentFunction, KernelArguments currentArgs, CancellationToken cancellationToken) =>
@@ -64,11 +64,12 @@ public static class SemanticKernelRegistry
                         functionName: f.Name,
                         description: f.Description,
                         parameters: [.. f.Metadata.Parameters.Where(p => p.Name != "scopeId")],
-                        returnParameter: f.Metadata.ReturnParameter))).ToArray();
+                        returnParameter: f.Metadata.ReturnParameter))).ToArray();*/
 
             return new Dictionary<string, KernelFunction[]>
             {
-                ["naive-rag"] = [.. transformedFunctions.Where(x => x.PluginName == nameof(TimePlugin) || x.PluginName == nameof(RetrievalPlugin))],
+                ["naive-rag"] = [.. kernel.Plugins.Where(x => x.Name == nameof(TimePlugin) || x.Name == nameof(RetrievalPlugin))
+                    .SelectMany(x => x)],
             }.ToImmutableDictionary();
         });
 
