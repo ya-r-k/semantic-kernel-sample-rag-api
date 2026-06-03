@@ -54,6 +54,9 @@ public class SemanticKernelDataGenerator(
                 result = chat.Adapt<MessagePartResponse>();
             }
 
+            // Extract token usage from metadata if available
+            ExtractTokenUsage(content, result);
+
             yield return result;
         }
     }
@@ -71,6 +74,9 @@ public class SemanticKernelDataGenerator(
                 result = chat.Adapt<MessagePartResponse>();
             }
 
+            // Extract token usage from metadata if available
+            ExtractTokenUsage(content, result);
+
             yield return result;
         }
     }
@@ -80,6 +86,25 @@ public class SemanticKernelDataGenerator(
         if (outerArguments is not null && outerArguments.Count > 0)
         {
             kernel.FunctionInvocationFilters.Add(new NonAiArgumentsApplyingFilter(outerArguments));
+        }
+    }
+
+    private static void ExtractTokenUsage(ChatMessageContent content, MessagePartResponse response)
+    {
+        if (content.Metadata is null)
+        {
+            return;
+        }
+
+        // Try to extract usage from Semantic Kernel's standard metadata
+        if (content.Metadata.TryGetValue("Usage", out var usageObj))
+        {
+            if (usageObj is ChatTokenUsage usage)
+            {
+                response.PromptTokens = usage.InputTokenCount;
+                response.CompletionTokens = usage.OutputTokenCount;
+                response.TotalTokens = usage.TotalTokenCount;
+            }
         }
     }
 }
