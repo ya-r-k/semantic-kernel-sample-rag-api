@@ -19,4 +19,6 @@ public class Document : IVectorEntity<Guid, float>, IEntity<Guid>, IEntityWithSc
     public bool IsChunked { get; set; }
 
     public ReadOnlyMemory<float> Vector { get; set; }
+
+    public bool IsOutOfDate { get; set; }
 }

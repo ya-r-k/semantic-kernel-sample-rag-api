@@ -21,4 +21,6 @@ public class Message : IEntity<Guid>
     /// Gets or sets for AI messages: document + page list cited as sources.
     /// </summary>
     public SourceReference[]? SourceReferences { get; set; }
+
+    public bool UsesOutdatedSources { get; set; }
 }

@@ -12,7 +12,7 @@ namespace SampleRag.Application.Services;
 public class MessagesService(
     IDataGenerator dataGenerator,
     IChatService chatService,
-    IFilterRepository<Guid, Message, GetMessagesByModel> messagesRepository) : IMessagesService
+    IFilterRepository<Guid, Message, GetMessagesByModel> messagesRepository, IDocumentService documentService) : IMessagesService
 {
     public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string ownerId)
     {
@@ -78,6 +78,27 @@ public class MessagesService(
             else if (part.Step is GenerationStep.ToolResult)
             {
                 aiMessage.SourceReferences = part.ToolsResults.Adapt<SourceReference[]>();
+                var sourceIds = aiMessage.SourceReferences
+                    ?.Select(x => x.DocumentId)
+                    .Distinct()
+                    .ToArray() ?? Array.Empty<Guid>();
+
+                if (sourceIds.Length > 0)
+                {
+                    var usedDocs = await documentService.GetByIdsAsync(sourceIds);
+                    if (usedDocs.Any(d => d.IsOutOfDate))
+                    {
+                        aiMessage.UsesOutdatedSources = true;
+
+                        var sourceChatList = await chatService.GetByIdsAsync(userMessage.ChatId);
+                        var sourceChat = sourceChatList.FirstOrDefault();
+                        if (sourceChat is not null && !sourceChat.HasOutdatedSources)
+                        {
+                            sourceChat.HasOutdatedSources = true;
+                            await chatService.UpdateAsync(sourceChat);
+                        }
+                    }
+                }
             }
 
             /*if (part.Step == prevGenerationStep)
