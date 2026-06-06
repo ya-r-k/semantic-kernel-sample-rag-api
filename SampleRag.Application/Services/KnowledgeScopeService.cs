@@ -40,7 +40,7 @@ public class KnowledgeScopeService(
         await scopeRepository.PartialUpdateAsync(scopeId, request, ct);
     }
 
-    public async Task RemoveByIds(Guid[] ids, CancellationToken ct = default)
+    public async Task RemoveByIdsAsync(Guid[] ids, CancellationToken ct = default)
     {
         await scopeRepository.RemoveByIdsAsync(ids, ct);
     }
