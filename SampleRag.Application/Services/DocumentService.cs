@@ -1,6 +1,7 @@
 using Mapster;
 using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces.Repositories;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
 
@@ -8,7 +9,7 @@ namespace SampleRag.Application.Services;
 
 public class DocumentService(
     IDocumentChunkService documentChunkService,
-    IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository,
+    IDocumentRepository documentsRepository,
     IFileRepository fileRepository) : IDocumentService
 {
     public async Task<Document?> AddAsync(UploadDocumentRequestModel request)

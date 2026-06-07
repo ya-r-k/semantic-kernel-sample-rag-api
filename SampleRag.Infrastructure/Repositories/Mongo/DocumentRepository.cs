@@ -1,12 +1,14 @@
 using MongoDB.Driver;
 using SampleRag.Domain.Entities;
-using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces.Repositories;
 using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Infrastructure.Repositories.Mongo;
 
-public class DocumentRepository(IMongoDatabase database) : MongoBaseRepository<Document>(database), IFilterRepository<Guid, Document, GetDocumentsByModel>
+public class DocumentRepository(IMongoDatabase database) : MongoBaseRepository<Document>(database), IDocumentRepository
 {
+    private readonly IMongoCollection<DocumentChunk> chunksCollection = database.GetCollection<DocumentChunk>(nameof(DocumentChunk));
+
     public async Task<IEnumerable<Document>> GetBatchByAsync(GetDocumentsByModel filterModel)
     {
         var sortDefinition = Builders<Document>.Sort.Ascending("_id");
@@ -33,5 +35,37 @@ public class DocumentRepository(IMongoDatabase database) : MongoBaseRepository<D
             .Limit(filterModel.BatchSize);
 
         return await query.ToListAsync();
+    }
+
+    public async Task RecalculateIndexPercentageAsync(Guid[] documentsIds)
+    {
+        var chunkFilter = Builders<DocumentChunk>.Filter.In(x => x.DocumentId, documentsIds);
+        var documentAggregation = await chunksCollection.Aggregate()
+            .Match(chunkFilter)
+            .Group(
+                c => c.DocumentId,
+                g => new
+                {
+                    DocumentId = g.Key,
+                    TotalChunks = g.Count(),
+                    VectorizedChunks = g.Count(c => c.IsVectorized),
+                })
+            .Project(g => new
+            {
+                g.DocumentId,
+                IndexPercentage = g.TotalChunks > 0 ? (double)g.VectorizedChunks / g.TotalChunks * 100 : 0,
+            })
+            .ToListAsync();
+
+        var updates = documentAggregation
+            .Select(result => new UpdateOneModel<Document>(
+                Builders<Document>.Filter.Eq(d => d.Id, result.DocumentId),
+                Builders<Document>.Update.Set(d => d.IndexPercentage, result.IndexPercentage)))
+            .ToList();
+
+        if (updates.Count > 0)
+        {
+            await collection.BulkWriteAsync(updates);
+        }
     }
 }

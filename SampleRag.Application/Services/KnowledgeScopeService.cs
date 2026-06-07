@@ -1,6 +1,6 @@
 using Mapster;
 using SampleRag.Domain.Entities;
-using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces.Repositories;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.Models.Enums;
 using SampleRag.Domain.RequestModels;

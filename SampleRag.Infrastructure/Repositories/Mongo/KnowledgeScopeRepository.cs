@@ -1,6 +1,7 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SampleRag.Domain.Entities;
-using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces.Repositories;
 using SampleRag.Domain.Models.Enums;
 using SampleRag.Domain.RequestModels;
 
@@ -8,6 +9,8 @@ namespace SampleRag.Infrastructure.Repositories.Mongo;
 
 public class KnowledgeScopeRepository(IMongoDatabase database) : MongoBaseRepository<KnowledgeScope>(database), IKnowledgeScopeRepository
 {
+    private readonly IMongoCollection<DocumentChunk> chunksCollection = database.GetCollection<DocumentChunk>(nameof(DocumentChunk));
+
     public async Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel)
     {
         var sortDefinition = Builders<KnowledgeScope>.Sort.Ascending("_id");
@@ -87,5 +90,84 @@ public class KnowledgeScopeRepository(IMongoDatabase database) : MongoBaseReposi
             .Limit(filterModel.BatchSize);
 
         return await query.ToListAsync(cancellationToken: ct);
+    }
+
+    public async Task RecalculateIndexPercentageAsync(Guid[] documentsIds)
+    {
+        var chunkFilter = Builders<DocumentChunk>.Filter.In(x => x.DocumentId, documentsIds);
+        var pipeline = new BsonDocument[]
+         {
+            new ("$match", new BsonDocument
+            {
+                {
+                    "DocumentId",
+                    new BsonDocument("$in", new BsonArray(documentsIds
+                        .Select(id => new BsonBinaryData(id, GuidRepresentation.Standard))
+                        .ToList()))
+                },
+            }),
+            new ("$group", new BsonDocument
+            {
+                { "_id", "$DocumentId" },
+                { "TotalChunks", new BsonDocument("$sum", 1) },
+                {
+                    "VectorizedChunks",
+                    new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray
+                    {
+                        new BsonDocument("$eq", new BsonArray { "$IsVectorized", true }),
+                        1,
+                        0,
+                    }))
+                },
+            }),
+            new ("$lookup", new BsonDocument
+            {
+                { "from", "Document" },
+                { "localField", "_id" },
+                { "foreignField", "_id" },
+                { "as", "DocumentInfo" },
+            }),
+            new ("$unwind", "$DocumentInfo"),
+            new ("$group", new BsonDocument
+            {
+                { "_id", "$DocumentInfo.ScopeId" },
+                { "TotalChunksInScope", new BsonDocument("$sum", "$TotalChunks") },
+                { "VectorizedChunksInScope", new BsonDocument("$sum", "$VectorizedChunks") },
+                { "DocumentsCount", new BsonDocument("$sum", 1) },
+            }),
+            new ("$project", new BsonDocument
+            {
+                { "ScopeId", "$_id" },
+                {
+                    "IndexPercentage",
+                    new BsonDocument("$cond", new BsonArray
+                    {
+                        new BsonDocument("$gt", new BsonArray { "$TotalChunksInScope", 0 }),
+                        new BsonDocument("$multiply", new BsonArray
+                        {
+                            new BsonDocument("$divide", new BsonArray { "$VectorizedChunksInScope", "$TotalChunksInScope" }),
+                            100.0
+                        }),
+                        0.0,
+                    })
+                },
+                { "DocumentsCount", 1 },
+                { "_id", 0 },
+            }),
+         };
+
+        var scopeAggregation = await chunksCollection.Aggregate<BsonDocument>(pipeline)
+            .ToListAsync();
+
+        var updates = scopeAggregation
+            .Select(result => new UpdateOneModel<KnowledgeScope>(
+                Builders<KnowledgeScope>.Filter.Eq(s => s.Id, result["ScopeId"].AsGuid),
+                Builders<KnowledgeScope>.Update.Set(s => s.IndexPercentage, result["IndexPercentage"].AsDouble)))
+            .ToList();
+
+        if (updates.Count > 0)
+        {
+            await collection.BulkWriteAsync(updates);
+        }
     }
 }
