@@ -11,10 +11,12 @@
 
 # Spec Driven Development
 **/.specify/templates
-**/.specify/scripts/powershell
+**/.specify/integrations
+**/.specify/scripts
 
-# AI IDEs
-**/.cursor
+# AI-assisted development files
+**/.cursor/**/speckit.*.md
+**/.cursor/plans/**/*.*
 
 # Visual Studio
 **/.vs
