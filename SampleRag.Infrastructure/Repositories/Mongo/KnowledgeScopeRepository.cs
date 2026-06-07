@@ -10,7 +10,6 @@ namespace SampleRag.Infrastructure.Repositories.Mongo;
 public class KnowledgeScopeRepository(IMongoDatabase database) : MongoBaseRepository<KnowledgeScope>(database), IKnowledgeScopeRepository
 {
     private readonly IMongoCollection<DocumentChunk> chunksCollection = database.GetCollection<DocumentChunk>(nameof(DocumentChunk));
-    private readonly IMongoCollection<Document> documentsCollection = database.GetCollection<Document>(nameof(Document));
 
     public async Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel)
     {
