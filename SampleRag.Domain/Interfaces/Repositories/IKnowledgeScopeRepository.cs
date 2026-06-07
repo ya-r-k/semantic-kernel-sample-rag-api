@@ -18,4 +18,6 @@ public interface IKnowledgeScopeRepository : IFilterRepository<Guid, KnowledgeSc
     Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default);
 
     Task RecalculateIndexPercentageAsync(Guid[] documentsIds);
+
+    Task RecalculateDocumentsCountAsync(Guid[] scopesIds);
 }
