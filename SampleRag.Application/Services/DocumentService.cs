@@ -6,28 +6,14 @@ using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.Application.Services;
 
-public class DocumentService : IDocumentService
+public class DocumentService(
+    IDocumentChunkService documentChunkService,
+    IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository,
+    IMessageRepository messageRepository,
+    IChatService chatService,
+    IFileRepository fileRepository,
+    IVectorRepository<DocumentChunk> vectorRepository) : IDocumentService
 {
-    private readonly IDocumentChunkService documentChunkService;
-    private readonly IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository;
-    private readonly IMessageRepository messageRepository;
-    private readonly IChatService chatService;
-    private readonly IFileRepository fileRepository;
-
-    public DocumentService(
-        IDocumentChunkService documentChunkService,
-        IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository,
-        IMessageRepository messageRepository,
-        IChatService chatService,
-        IFileRepository fileRepository)
-    {
-        this.documentChunkService = documentChunkService;
-        this.documentsRepository = documentsRepository;
-        this.messageRepository = messageRepository;
-        this.chatService = chatService;
-        this.fileRepository = fileRepository;
-    }
-
     public async Task<Document?> AddAsync(UploadDocumentRequestModel request)
     {
         var savingData = request.Adapt<Document>();
@@ -53,7 +39,7 @@ public class DocumentService : IDocumentService
     public async Task UpdateAsync(Document[] items, string[] fields)
     {
         var itemIds = items.Select(x => x.Id).ToArray();
-        var existingDocs = await this.GetByIdsAsync(itemIds);
+        var existingDocs = await GetByIdsAsync(itemIds);
         var existingById = existingDocs.ToDictionary(
             doc => doc.Id.ToString(),
             StringComparer.OrdinalIgnoreCase);
@@ -93,25 +79,30 @@ public class DocumentService : IDocumentService
 
         if (fields.Contains(nameof(Document.IsOutOfDate)))
         {
+            var outOfDateDocs = items.Where(d => d.IsOutOfDate).ToArray();
+            foreach (var doc in outOfDateDocs)
+            {
+                await vectorRepository.RemoveByAsync(doc.Id);
+            }
             await RefreshChatsOutdatedStateAsync(items);
         }
     }
 
     private async Task RefreshChatsOutdatedStateAsync(Document[] items)
     {
-        var updatedDocs = await this.GetByIdsAsync(items.Select(x => x.Id).ToArray());
+        var updatedDocs = await GetByIdsAsync(items.Select(x => x.Id).ToArray());
         var chatsToUpdate = new List<Chat>();
 
         foreach (var updatedDoc in updatedDocs)
         {
-            var referencedMessages = await this.messageRepository.GetByDocumentIdAsync(updatedDoc.Id);
+            var referencedMessages = await messageRepository.GetByDocumentIdAsync(updatedDoc.Id);
             var chatIds = referencedMessages.Select(x => x.ChatId).Distinct().ToArray();
             if (!chatIds.Any())
             {
                 continue;
             }
 
-            var chats = (await this.chatService.GetByIdsAsync(chatIds)).ToArray();
+            var chats = (await chatService.GetByIdsAsync(chatIds)).ToArray();
             foreach (var chat in chats)
             {
                 if (updatedDoc.IsOutOfDate)
@@ -125,7 +116,7 @@ public class DocumentService : IDocumentService
                     continue;
                 }
 
-                var chatMessages = await this.messageRepository.GetByChatIdAsync(chat.Id);
+                var chatMessages = await messageRepository.GetByChatIdAsync(chat.Id);
                 var referencedDocIds = chatMessages
                     .Where(m => m.SourceReferences != null)
                     .SelectMany(m => m.SourceReferences!)
@@ -144,7 +135,7 @@ public class DocumentService : IDocumentService
                     continue;
                 }
 
-                var currentDocs = await this.GetByIdsAsync(referencedDocIds);
+                var currentDocs = await GetByIdsAsync(referencedDocIds);
                 var stillHasOutdated = currentDocs.Any(d => d.IsOutOfDate);
                 if (chat.HasOutdatedSources != stillHasOutdated)
                 {
@@ -156,7 +147,7 @@ public class DocumentService : IDocumentService
 
         if (chatsToUpdate.Any())
         {
-            await this.chatService.UpdateAsync(chatsToUpdate.ToArray());
+            await chatService.UpdateAsync(chatsToUpdate.ToArray());
         }
     }
 
