@@ -80,30 +80,20 @@ public class MessagesService(
                 aiMessage.SourceReferences = part.ToolsResults.Adapt<SourceReference[]>();
             }
 
-            // Capture token usage metrics from streaming response
             if (part.PromptTokens.HasValue)
             {
-                aiMessage.PromptTokens = part.PromptTokens;
+                aiMessage.PromptTokens = (aiMessage.PromptTokens ?? 0) + part.PromptTokens.Value;
             }
 
             if (part.CompletionTokens.HasValue)
             {
-                aiMessage.CompletionTokens = part.CompletionTokens;
+                aiMessage.CompletionTokens = (aiMessage.CompletionTokens ?? 0) + part.CompletionTokens.Value;
             }
 
             if (part.TotalTokens.HasValue)
             {
-                aiMessage.TotalTokens = part.TotalTokens;
+                aiMessage.TotalTokens = (aiMessage.TotalTokens ?? 0) + part.TotalTokens.Value;
             }
-
-            /*if (part.Step == prevGenerationStep)
-            {
-                part.Step = GenerationStep.Unknown;
-            }
-            else
-            {
-                prevGenerationStep = part.Step;
-            }*/
 
             yield return part;
         }
