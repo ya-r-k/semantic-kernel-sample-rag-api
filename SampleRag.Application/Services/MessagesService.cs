@@ -12,7 +12,8 @@ namespace SampleRag.Application.Services;
 public class MessagesService(
     IDataGenerator dataGenerator,
     IChatService chatService,
-    IFilterRepository<Guid, Message, GetMessagesByModel> messagesRepository) : IMessagesService
+    IMessageRepository messagesRepository,
+    IDocumentService documentService) : IMessagesService
 {
     public async IAsyncEnumerable<MessagePartResponse> GenerateAiResponce(SendMessageRequest message, string ownerId)
     {

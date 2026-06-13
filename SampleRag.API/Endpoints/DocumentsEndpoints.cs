@@ -49,6 +49,25 @@ public static class DocumentsEndpoints
             .Produces(StatusCodes.Status403Forbidden)
             .Accepts<UploadDocumentRequestModel>("application/json");
 
+        group.MapPut("/outdated/{id:guid}", async (Guid id, [FromBody] UpdateDocumentOutdatedRequestModel request, IDocumentService documentService, CancellationToken ct) =>
+        {
+            var document = new Document
+            {
+                Id = id,
+                IsOutOfDate = request.IsOutOfDate
+            };
+
+            await documentService.UpdateAsync(
+                new[] { document },
+                new[] { nameof(Document.IsOutOfDate) });
+
+            return Results.NoContent();
+        })
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Accepts<UpdateDocumentOutdatedRequestModel>("application/json");
+
         group.MapPost("/filter", async ([FromBody] GetDocumentsByModel model, IDocumentService documentService, CancellationToken ct) =>
         {
             return Results.Ok(await documentService.GetBatchByAsync(model));

@@ -9,7 +9,10 @@ namespace SampleRag.Application.Services;
 public class DocumentService(
     IDocumentChunkService documentChunkService,
     IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository,
-    IFileRepository fileRepository) : IDocumentService
+    IMessageRepository messageRepository,
+    IChatService chatService,
+    IFileRepository fileRepository,
+    IVectorRepository<DocumentChunk> vectorRepository) : IDocumentService
 {
     public async Task<Document?> AddAsync(UploadDocumentRequestModel request)
     {
@@ -36,7 +39,7 @@ public class DocumentService(
     public async Task UpdateAsync(Document[] items, string[] fields)
     {
         var itemIds = items.Select(x => x.Id).ToArray();
-        var existingDocs = await this.GetByIdsAsync(itemIds);
+        var existingDocs = await GetByIdsAsync(itemIds);
         var existingById = existingDocs.ToDictionary(
             doc => doc.Id.ToString(),
             StringComparer.OrdinalIgnoreCase);
@@ -46,25 +49,106 @@ public class DocumentService(
         foreach (var item in items)
         {
             var itemDict = item.Adapt<Dictionary<string, object?>>()
-                .Where(kvp => fields.Contains(kvp.Key))
+                .Where(kvp => kvp.Key == nameof(Document.Id) || fields.Contains(kvp.Key))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            if (!itemDict.ContainsKey(nameof(Document.Id)))
+            {
+                itemDict[nameof(Document.Id)] = item.Id;
+            }
 
             if (existingById.TryGetValue(item.Id.ToString(), out var existingDoc))
             {
-                var newFilePath = Path.Combine(
-                    "assets",
-                    "documents",
-                    item.ScopeId.ToString(),
-                    Path.GetFileName(existingDoc.LocalLink));
-                itemDict[nameof(Document.LocalLink)] = newFilePath;
+                if (fields.Contains(nameof(Document.ScopeId)) && item.ScopeId != existingDoc.ScopeId)
+                {
+                    var newFilePath = Path.Combine(
+                        "assets",
+                        "documents",
+                        item.ScopeId.ToString(),
+                        Path.GetFileName(existingDoc.LocalLink));
 
-                await fileRepository.MoveAsync(existingDoc.LocalLink, newFilePath);
+                    itemDict[nameof(Document.LocalLink)] = newFilePath;
+                    await fileRepository.MoveAsync(existingDoc.LocalLink, newFilePath);
+                }
             }
 
             transformedItems.Add(itemDict);
         }
 
         await documentsRepository.PartialUpdateAsync([.. transformedItems]);
+
+        if (fields.Contains(nameof(Document.IsOutOfDate)))
+        {
+            var outOfDateDocs = items.Where(d => d.IsOutOfDate).ToArray();
+            foreach (var doc in outOfDateDocs)
+            {
+                await vectorRepository.RemoveByAsync(doc.Id);
+            }
+            await RefreshChatsOutdatedStateAsync(items);
+        }
+    }
+
+    private async Task RefreshChatsOutdatedStateAsync(Document[] items)
+    {
+        var updatedDocs = await GetByIdsAsync(items.Select(x => x.Id).ToArray());
+        var chatsToUpdate = new List<Chat>();
+
+        foreach (var updatedDoc in updatedDocs)
+        {
+            var referencedMessages = await messageRepository.GetByDocumentIdAsync(updatedDoc.Id);
+            var chatIds = referencedMessages.Select(x => x.ChatId).Distinct().ToArray();
+            if (!chatIds.Any())
+            {
+                continue;
+            }
+
+            var chats = (await chatService.GetByIdsAsync(chatIds)).ToArray();
+            foreach (var chat in chats)
+            {
+                if (updatedDoc.IsOutOfDate)
+                {
+                    if (!chat.HasOutdatedSources)
+                    {
+                        chat.HasOutdatedSources = true;
+                        chatsToUpdate.Add(chat);
+                    }
+
+                    continue;
+                }
+
+                var chatMessages = await messageRepository.GetByChatIdAsync(chat.Id);
+                var referencedDocIds = chatMessages
+                    .Where(m => m.SourceReferences != null)
+                    .SelectMany(m => m.SourceReferences!)
+                    .Select(sr => sr.DocumentId)
+                    .Distinct()
+                    .ToArray();
+
+                if (!referencedDocIds.Any())
+                {
+                    if (chat.HasOutdatedSources)
+                    {
+                        chat.HasOutdatedSources = false;
+                        chatsToUpdate.Add(chat);
+                    }
+
+                    continue;
+                }
+
+                var currentDocs = await GetByIdsAsync(referencedDocIds);
+                var stillHasOutdated = currentDocs.Any(d => d.IsOutOfDate);
+                if (chat.HasOutdatedSources != stillHasOutdated)
+                {
+                    chat.HasOutdatedSources = stillHasOutdated;
+                    chatsToUpdate.Add(chat);
+                }
+            }
+        }
+
+        if (chatsToUpdate.Any())
+        {
+            await chatService.UpdateAsync(chatsToUpdate.ToArray());
+        }
     }
 
     public async Task RemoveAllChunksAsync(CancellationToken ct = default)
