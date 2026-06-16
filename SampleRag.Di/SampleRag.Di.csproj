@@ -8,16 +8,16 @@
 	
   <ItemGroup>
     <PackageReference Include="Mapster" Version="10.0.7" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.5" />
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.74.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.77.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.74.0-alpha" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.74.0-preview" />
-    <PackageReference Include="Microsoft.SemanticKernel.Yaml" Version="1.74.0" />
-    <PackageReference Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.74.0" />
+    <PackageReference Include="Microsoft.SemanticKernel.Yaml" Version="1.77.0" />
+    <PackageReference Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.77.0" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
-    <PackageReference Include="Quartz" Version="3.18.0" />
-    <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.18.0" />
-    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.18.0" />
+    <PackageReference Include="Quartz" Version="3.18.1" />
+    <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.18.1" />
+    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.18.1" />
   </ItemGroup>
 
   <ItemGroup>

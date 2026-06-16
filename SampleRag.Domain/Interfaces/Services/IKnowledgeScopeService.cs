@@ -19,5 +19,5 @@ public interface IKnowledgeScopeService
 
     Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default);
 
-    Task RemoveByIds(Guid[] ids, CancellationToken ct = default);
+    Task RemoveByIdsAsync(Guid[] ids, CancellationToken ct = default);
 }

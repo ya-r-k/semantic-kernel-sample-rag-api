@@ -28,6 +28,12 @@ public class DocumentRepository(IMongoDatabase database) : MongoBaseRepository<D
             filter &= filterBuilder.Where(x => x.IsChunked == filterModel.IsChunked.Value);
         }
 
+        if (filterModel.IsOutOfDate.HasValue)
+        {
+            filter &= filterBuilder.Where(x => x.IsOutOfDate == filterModel.IsOutOfDate.Value);
+
+        }
+
         var query = this.collection.Find(filter)
             .Sort(sortDefinition)
             .Limit(filterModel.BatchSize);

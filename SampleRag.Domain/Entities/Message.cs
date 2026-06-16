@@ -38,4 +38,5 @@ public class Message : IEntity<Guid>
     /// Only populated for AI-generated messages.
     /// </summary>
     public int? TotalTokens { get; set; }
+    public bool UsesOutdatedSources { get; set; }
 }

@@ -54,5 +54,17 @@ public static class KnowledgeScopesEndpoints
         })
             .Produces<IEnumerable<KnowledgeScope>>(StatusCodes.Status200OK)
             .Accepts<GetBatchByModel>("application/json");
+
+        group.MapDelete("{id:guid}", async (
+            Guid id,
+            IKnowledgeScopeService scopeService,
+            CancellationToken ct) =>
+        {
+            await scopeService.RemoveByIdsAsync([id], ct);
+
+            return Results.NoContent();
+        })
+            .RequireAuthorization("RequireAdmin")
+            .Produces(StatusCodes.Status204NoContent);
     }
 }
