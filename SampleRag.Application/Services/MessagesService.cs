@@ -81,14 +81,20 @@ public class MessagesService(
                 aiMessage.SourceReferences = part.ToolsResults.Adapt<SourceReference[]>();
             }
 
-            /*if (part.Step == prevGenerationStep)
+            if (part.PromptTokens.HasValue)
             {
-                part.Step = GenerationStep.Unknown;
+                aiMessage.PromptTokens = (aiMessage.PromptTokens ?? 0) + part.PromptTokens.Value;
             }
-            else
+
+            if (part.CompletionTokens.HasValue)
             {
-                prevGenerationStep = part.Step;
-            }*/
+                aiMessage.CompletionTokens = (aiMessage.CompletionTokens ?? 0) + part.CompletionTokens.Value;
+            }
+
+            if (part.TotalTokens.HasValue)
+            {
+                aiMessage.TotalTokens = (aiMessage.TotalTokens ?? 0) + part.TotalTokens.Value;
+            }
 
             yield return part;
         }
@@ -109,6 +115,9 @@ public class MessagesService(
         yield return new MessagePartResponse
         {
             CreatedAt = aiMessage.CreatedAt,
+            PromptTokens = aiMessage.PromptTokens,
+            CompletionTokens = aiMessage.CompletionTokens,
+            TotalTokens = aiMessage.TotalTokens,
         };
     }
 }
