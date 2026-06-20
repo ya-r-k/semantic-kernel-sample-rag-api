@@ -16,19 +16,22 @@ public class DocumentService(
     IFileRepository fileRepository,
     IVectorRepository<DocumentChunk> vectorRepository) : IDocumentService
 {
-    public async Task<Document?> AddAsync(UploadDocumentRequestModel request)
+    public async Task<IEnumerable<Document>> AddAsync(params UploadDocumentRequestModel[] request)
     {
-        var savingData = request.Adapt<Document>();
-
-        savingData.LocalLink = await fileRepository.SaveAsync(
-            Path.Combine("assets", "documents", request.ScopeId.ToString()),
-            request.File.FileName,
-            request.File.Content);
-
-        savingData = (await documentsRepository.AddAsync([savingData])).FirstOrDefault();
-        if (savingData is not null)
+        var savingData = request.Adapt<Document[]>();
+        var scopesIds = savingData.Select(x => x.ScopeId).Distinct().ToArray();
+        for (var i = 0; i < request.Length; i++)
         {
-            await scopeRepository.RecalculateDocumentsCountAsync([savingData.ScopeId]);
+            savingData[i].LocalLink = await fileRepository.SaveAsync(
+                Path.Combine("assets", "documents", request[i].ScopeId.ToString()),
+                request[i].File.FileName,
+                request[i].File.Content);
+        }
+
+        savingData = [.. await documentsRepository.AddAsync(savingData)];
+        if (scopesIds is not null && scopesIds.Length > 0)
+        {
+            await scopeRepository.RecalculateDocumentsCountAsync(scopesIds);
         }
 
         return savingData;

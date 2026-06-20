@@ -2,7 +2,7 @@ using SampleRag.Domain.RequestModels;
 
 namespace SampleRag.API.Filters;
 
-public class DocumentUploadValidationFilter : IEndpointFilter
+public class BulkDocumentUploadValidationFilter : IEndpointFilter
 {
     private const int MaxNameLength = 500;
     private const double MaxFileSizeBytes = 20 * 1024 * 1024;
@@ -11,43 +11,44 @@ public class DocumentUploadValidationFilter : IEndpointFilter
 
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
-        var document = context.Arguments.OfType<UploadDocumentRequestModel>().FirstOrDefault();
-        if (document is null)
+        var documents = context.Arguments.OfType<UploadDocumentRequestModel[]>().FirstOrDefault();
+        if (documents is null || documents.Length > 0)
         {
-            return Results.BadRequest("Request body with document data is required");
+            return Results.BadRequest("Request body with documents data is required");
         }
 
         var errors = new Dictionary<string, string[]>();
-        if (string.IsNullOrWhiteSpace(document.Name))
+        if (documents.Any(x => string.IsNullOrWhiteSpace(x.Name)))
         {
             errors["name"] = ["Document name is required"];
         }
-        else if (document.Name.Length > MaxNameLength)
+        else if (documents.Any(x => x.Name.Length > MaxNameLength))
         {
             errors["name"] = [$"Document name cannot exceed {MaxNameLength} characters"];
         }
 
-        if (document.ScopeId == Guid.Empty)
+        if (documents.Any(x => x.ScopeId == Guid.Empty))
         {
             errors["scopeId"] = ["Scope ID is required"];
         }
 
-        if (document.File is null)
+        if (documents.Any(x => x.File is null))
         {
             errors["file"] = ["File data is required"];
         }
-        else if (document?.File?.Content is null)
+        else if (documents.Any(x => x.File?.Content is null))
         {
             errors["file.content"] = ["File content is required"];
         }
         else
         {
-            if ((long)(document.File.Content.Length * 3.0 / 4.0) > MaxFileSizeBytes)
+            if (documents.Any(x => x.File.Content.Length * 3.0 / 4.0 > MaxFileSizeBytes))
             {
                 errors["file.content"] = ["File size exceeds 20 MB limit"];
             }
 
-            if (!AllowedPdfExtensions.Contains(Path.GetExtension(document.File.FileName ?? string.Empty).ToLowerInvariant()))
+            if (documents.Any(x => !AllowedPdfExtensions.Contains(
+                Path.GetExtension(x.File.FileName ?? string.Empty).ToLowerInvariant())))
             {
                 errors["file.filename"] = ["Only PDF files are allowed"];
             }
