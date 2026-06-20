@@ -36,7 +36,7 @@ public static class MongoPersistanceRegistry
     private static void ConfigureMongoDbRepositories(this IServiceCollection services)
     {
         services.AddTransient<IFilterRepository<Guid, DocumentChunk, GetDocumentChunksByModel>, DocumentChunkRepository>();
-        services.AddTransient<IFilterRepository<Guid, Message, GetMessagesByModel>, MessageRepository>();
+        services.AddTransient<IMessageRepository, MessageRepository>();
         services.AddTransient<IFilterRepository<Guid, Chat, GetChatsByModel>, ChatRepository>();
         services.AddTransient<IFilterRepository<Guid, Feedback, GetFeedbackByModel>, FeedbackRepository>();
         services.AddTransient<IDocumentRepository, DocumentRepository>();

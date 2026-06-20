@@ -22,4 +22,13 @@ public class MessagePartResponse
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ToolResultResponse[]? ToolsResults { get; set; }
+
+    [JsonIgnore]
+    public int? PromptTokens { get; set; }
+
+    [JsonIgnore]
+    public int? CompletionTokens { get; set; }
+
+    [JsonIgnore]
+    public int? TotalTokens { get; set; }
 }
