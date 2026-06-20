@@ -1,47 +1,41 @@
 # SampleRag API
 
-[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![Docker](https://img.shields.io/badge/docker-supported-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![RAG](https://img.shields.io/badge/RAG-Semantic%20Kernel-0A66C2)](https://learn.microsoft.com/semantic-kernel/)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![Docker](https://img.shields.io/badge/Docker-supported-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Semantic Kernel](https://img.shields.io/badge/RAG-Semantic%20Kernel-0A66C2)](https://learn.microsoft.com/semantic-kernel/)
 
-Backend API for a scoped Retrieval-Augmented Generation (RAG) chat system built with ASP.NET Core, Semantic Kernel, Ollama, Qdrant, and MongoDB.
+SampleRag API is an internal Retrieval-Augmented Generation backend for scoped chat, document upload, and feedback workflows built with ASP.NET Core, Semantic Kernel, Ollama, Qdrant, and MongoDB.
 
 ## Table of Contents
 
-- [What This Project Does](#what-this-project-does)
+- [What This Project Does](#what-it-does)
+- [API surface](#api-surface)
 - [Why This Project Is Useful](#why-this-project-is-useful)
-- [How to Get Started](#how-to-get-started)
-- [How to Use the API](#how-to-use-the-api)
-- [Where to Get Help](#where-to-get-help)
-- [Who Maintains and Contributes](#who-maintains-and-contributes)
+- [Requirements](#requirements)
+- [Setup](#setup)
+- [Quick start](#quick-start)
+- [Documentation](#documentation)
+- [Building & testing](#building-&-testing)
+- [Contributing](#contributing)
+- [License](#license)
 
-## What This Project Does
+## What it does
 
-`SampleRag API` provides backend endpoints for:
+- Streams chat responses over SSE for lower perceived latency.
+- Keeps chats and documents tied to knowledge scopes and access rules.
+- Stores uploaded files on disk and metadata in MongoDB.
+- Uses Qdrant for semantic retrieval over document chunks.
+- Captures feedback so answer quality can be reviewed later.
 
-- JWT-authenticated chat and message flows
-- Document upload and ingestion for RAG
-- Vector search with Qdrant and embeddings from Ollama
-- Knowledge scopes for access control
-- Message feedback capture
+## API surface
 
-Main API route groups:
-
-- `api/auth` (development login helper)
-- `api/chats`
-- `api/messages`
-- `api/documents`
-- `api/files`
-- `api/knowledgescopes`
-- `api/feedbacks`
-
-Solution structure:
-
-- `SampleRag.API` - HTTP API and endpoint composition
-- `SampleRag.Application` - application logic and orchestration
-- `SampleRag.Domain` - entities, contracts, domain models
-- `SampleRag.Infrastructure` - persistence and external integrations
-- `SampleRag.Di` - dependency registration/configuration
+- `api/auth` - development login helper
+- `api/chats` - create, list, update owners, delete
+- `api/messages` - send streamed messages and list history
+- `api/documents` - upload, list, and clean up documents/chunks
+- `api/files` - scoped file download
+- `api/knowledgescopes` - scope management
+- `api/feedbacks` - feedback capture and listing
 
 ## Why This Project Is Useful
 
@@ -51,64 +45,42 @@ Solution structure:
 - Production-oriented baseline: JWT auth, rate limiting, structured logging, style analysis.
 - Container-friendly: scripts for dependency containers and API container startup.
 
-## How to Get Started
-
-### Prerequisites
+## Requirements
 
 - .NET 10 SDK
-- Docker Desktop (recommended for local dependencies)
+- Docker Desktop, if you want to run the dependency containers
+- MongoDB, Qdrant, and Ollama if you are not using the provided scripts
 
-### 1) Clone repository
+## Setup
 
-```bash
-git clone https://github.com/ya-r-k/semantic-kernel-sample-rag-api
-cd semantic-kernel-sample-rag-api
-```
+1. Clone the repository.
+2. Restore and build the solution.
 
-### 2) (Optional) Restore and build project
 ```bash
 dotnet restore
-dotnet build
+dotnet build SampleRag.API.slnx
 ```
 
-### 3) (Optional) Verify configuration
+3. Start the local dependencies.
 
-Review `SampleRag.API/appsettings.json` and adjust if needed:
+```bat
+Scripts\docker.run-deps.bat
+```
 
-- `DbSettings:ConnectionString`
-- `VectorDbSettings:Url`
-- `GenAiProviderSettings:Url`
-- `GenAiProviderSettings:TextModel`
-- `GenAiProviderSettings:TextEmbeddingModel`
+4. Run the API.
 
+```bat
+Scripts\docker.run-api.bat
+```
+
+If you want to run the API locally instead of in Docker, review `SampleRag.API/appsettings.json` and make sure the MongoDB, Qdrant, Ollama, and JWT settings match your environment.
 
 Default development URL: `http://localhost:5234`
 Swagger UI: `http://localhost:5234/swagger`
 
-### 4) (Optional) Start required dependencies
+## Quick start
 
-Use `Scripts/docker.run-deps.bat` to launch:
-
-- MongoDB (`localhost:27017`)
-- Qdrant (`localhost:6334`)
-- Ollama (`localhost:11434`)
-
-The script also pulls default models used by this project:
-
-- `qwen3:4b`
-- `qwen3.5:0.8b`
-- `mxbai-embed-large:335m`
-
-
-### 5) Run the API in Docker
-
-Use `Scripts/docker.run-api.bat` to run Sample.RagApi in Docker. Starting `Scripts/docker.run-deps.bat` separately is unnecessary because it is already launched by `Scripts/docker.run-api.bat`.
-
-It builds and starts the API container on port `5234` and connects it to the shared `samplerag-net` network.
-
-## How to Use the API
-
-In `Development`, you can generate a short-lived token via:
+In development, get a token first:
 
 ```http
 POST /api/auth/login
@@ -122,54 +94,35 @@ Content-Type: application/json
 }
 ```
 
-Then call protected endpoints with:
+Then try the normal flow:
 
-```http
-Authorization: Bearer <jwt-token>
-```
+1. Create a knowledge scope with `POST /api/knowledgescopes`.
+2. Upload a document with `POST /api/documents`.
+3. Create or open a chat with `POST /api/chats`.
+4. Send a message with `POST /api/messages` and read the streamed response.
+5. Submit feedback with `POST /api/feedbacks`.
 
-Example flow:
+See `specs/001-demo-rag-api/contracts/api-endpoints.md` for request shapes and endpoint details.
 
-1. Create scope: `POST /api/knowledgescopes`
-2. Upload document: `POST /api/documents`
-3. Create chat: `POST /api/chats` (or send first message directly)
-4. Send message (SSE): `POST /api/messages`
-5. Submit feedback: `POST /api/feedbacks`
+## Documentation
 
-For request/response examples, see:
+- Deep technical overview: `project.md`
+- Endpoint contracts: `specs/001-demo-rag-api/contracts/api-endpoints.md`
+- Quickstart spec: `specs/001-demo-rag-api/quickstart.md`
 
-- `specs/001-demo-rag-api/quickstart.md`
-- `specs/001-demo-rag-api/contracts/api-endpoints.md`
-
-## Where to Get Help
-
-- Start with Swagger UI in local development: `http://localhost:5234/swagger`
-- Implementation specs and endpoint contracts:
-  - `specs/001-demo-rag-api/`
-  - `specs/001-demo-rag-api/contracts/api-endpoints.md`
-- If you hit setup issues, open an issue in this repository with:
-  - runtime logs
-  - config deltas (without secrets)
-  - exact request sample
-
-## Who Maintains and Contributes
-
-This repository is maintained by project contributors.
-
-### Contributing
-
-- Fork the repository and create a feature branch.
-- Make focused changes with tests/verification where possible.
-- Run formatting and build checks before opening a PR:
+## Building & testing
 
 ```bash
-dotnet format SampleRag.API.slnx
-dotnet build
+dotnet build SampleRag.API.slnx
+dotnet test SampleRag.API.slnx
 ```
 
-- Open a pull request describing the problem, approach, and verification steps.
+There is currently no test project in the solution, so `dotnet build` is the main verification step.
 
-### Notes
+## Contributing
 
-- No dedicated `CONTRIBUTING.md` is currently present; use the workflow above.
-- No `LICENSE` file is currently present; add one before public distribution.
+There is no `CONTRIBUTING.md` file yet. Keep changes focused, run the build locally, and include any relevant verification notes in pull requests.
+
+## License
+
+No `LICENSE` file is currently present in the repository.

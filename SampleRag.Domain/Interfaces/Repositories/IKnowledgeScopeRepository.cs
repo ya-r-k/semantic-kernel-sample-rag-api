@@ -2,7 +2,7 @@ using SampleRag.Domain.Entities;
 using SampleRag.Domain.Models.Enums;
 using SampleRag.Domain.RequestModels;
 
-namespace SampleRag.Domain.Interfaces;
+namespace SampleRag.Domain.Interfaces.Repositories;
 
 /// <summary>
 /// Repository for scope-user access. Enforces (ScopeId, UserId) uniqueness.
@@ -16,4 +16,8 @@ public interface IKnowledgeScopeRepository : IFilterRepository<Guid, KnowledgeSc
     Task PartialUpdateAsync(Guid scopeId, UpdateScopeRequest request, CancellationToken ct = default);
 
     Task<IEnumerable<KnowledgeScope>> GetBatchByAsync(GetBatchByModel filterModel, UserRole role, CancellationToken ct = default);
+
+    Task RecalculateIndexPercentageAsync(Guid[] documentsIds);
+
+    Task RecalculateDocumentsCountAsync(Guid[] scopesIds);
 }

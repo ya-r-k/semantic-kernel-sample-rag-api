@@ -1,6 +1,7 @@
 using Mapster;
 using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces.Repositories;
 using SampleRag.Domain.Interfaces.Services;
 using SampleRag.Domain.RequestModels;
 
@@ -8,9 +9,10 @@ namespace SampleRag.Application.Services;
 
 public class DocumentService(
     IDocumentChunkService documentChunkService,
-    IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository,
+    IDocumentRepository documentsRepository,
     IMessageRepository messageRepository,
     IChatService chatService,
+    IKnowledgeScopeRepository scopeRepository,
     IFileRepository fileRepository,
     IVectorRepository<DocumentChunk> vectorRepository) : IDocumentService
 {
@@ -23,7 +25,13 @@ public class DocumentService(
             request.File.FileName,
             request.File.Content);
 
-        return (await documentsRepository.AddAsync([savingData])).FirstOrDefault();
+        savingData = (await documentsRepository.AddAsync([savingData])).FirstOrDefault();
+        if (savingData is not null)
+        {
+            await scopeRepository.RecalculateDocumentsCountAsync([savingData.ScopeId]);
+        }
+
+        return savingData;
     }
 
     public async Task<IEnumerable<Document>> GetBatchByAsync(GetDocumentsByModel model)
@@ -157,8 +165,18 @@ public class DocumentService(
         await documentChunkService.RemoveAllAsync(ct);
     }
 
-    public Task RemoveByIdsAsync(params Guid[] ids)
+    public async Task RemoveByIdsAsync(params Guid[] ids)
     {
-        return documentsRepository.RemoveByIdsAsync(ids);
+        var documents = await documentsRepository.GetByIdsAsync(ids);
+        var scopesIds = documents.Select(x => x.ScopeId)
+            .Distinct()
+            .ToArray();
+
+        if (scopesIds.Length > 0)
+        {
+            await scopeRepository.RecalculateDocumentsCountAsync(scopesIds);
+        }
+
+        await documentsRepository.RemoveByIdsAsync(ids);
     }
 }
