@@ -9,5 +9,9 @@ public class KnowledgeScope : IEntity<Guid>
 
     public string? Name { get; set; }
 
+    public double IndexPercentage { get; set; }
+
+    public double DocumentsCount { get; set; }
+
     public UserRole[] Roles { get; set; }
 }

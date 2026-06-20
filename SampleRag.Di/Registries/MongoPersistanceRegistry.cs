@@ -5,6 +5,7 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using SampleRag.Domain.Entities;
 using SampleRag.Domain.Interfaces;
+using SampleRag.Domain.Interfaces.Repositories;
 using SampleRag.Domain.Models.Configs;
 using SampleRag.Domain.RequestModels;
 using SampleRag.Infrastructure.Repositories.Mongo;
@@ -35,10 +36,10 @@ public static class MongoPersistanceRegistry
     private static void ConfigureMongoDbRepositories(this IServiceCollection services)
     {
         services.AddTransient<IFilterRepository<Guid, DocumentChunk, GetDocumentChunksByModel>, DocumentChunkRepository>();
-        services.AddTransient<IFilterRepository<Guid, Document, GetDocumentsByModel>, DocumentRepository>();
-        services.AddTransient<IFilterRepository<Guid, Message, GetMessagesByModel>, MessageRepository>();
+        services.AddTransient<IMessageRepository, MessageRepository>();
         services.AddTransient<IFilterRepository<Guid, Chat, GetChatsByModel>, ChatRepository>();
         services.AddTransient<IFilterRepository<Guid, Feedback, GetFeedbackByModel>, FeedbackRepository>();
+        services.AddTransient<IDocumentRepository, DocumentRepository>();
         services.AddTransient<IKnowledgeScopeRepository, KnowledgeScopeRepository>();
         services.AddTransient<IChatRepository, ChatRepository>();
     }

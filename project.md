@@ -1,355 +1,454 @@
-# Codebase Analysis: SampleRag API
+# Project deep-dive: SampleRag API
 
-## 📁 Project Structure
+## Intended use & consuming projects
 
-### Directory tree (up to 3rd level)
+Not specified by maintainer. Operationally, this API is meant for an isolated internal environment inside the organization, so the likely consumers are internal web clients or service clients that need scoped RAG chat, document ingestion, and feedback capture.
 
+The most important product constraints are response time, scoped access control, and answering in the same language as the user. Document language is not required to match the question language; retrieval quality matters more than document language. No automated testing plan is currently scheduled.
+
+## API purpose & public surface
+
+SampleRag is an ASP.NET Core Minimal API solution that wraps a scoped Retrieval-Augmented Generation workflow around MongoDB, Qdrant, Ollama, and Semantic Kernel. It is not a library in the narrow sense; it is a layered application with a clear composition root and service boundaries.
+
+Main projects:
+
+- `SampleRag.API` - HTTP host, endpoint groups, filters, auth, rate limiting, Swagger, Serilog
+- `SampleRag.Application` - orchestration services, plugins, filters, background jobs, prompt-related helpers
+- `SampleRag.Domain` - entities, request models, abstractions, service contracts, config models
+- `SampleRag.Infrastructure` - MongoDB, local file storage, Qdrant, Semantic Kernel data generation, embeddings
+- `SampleRag.Di` - dependency registration and composition root
+
+Public surface is centered around these endpoint groups:
+
+- `api/chats`
+- `api/messages`
+- `api/documents`
+- `api/files`
+- `api/knowledgescopes`
+- `api/feedbacks`
+
+The main runtime orchestration happens through `MessagesService`, `DocumentService`, `KnowledgeScopeService`, `ChatService`, `DocumentChunkService`, `SemanticKernelDataGenerator`, and the endpoint filters that guard scope and chat access.
+
+## Project structure
+
+The solution is organized by runtime layer, which fits the current application reasonably well:
+
+```text
+SampleRag.API/
+SampleRag.Application/
+SampleRag.Domain/
+SampleRag.Infrastructure/
+SampleRag.Di/
+Scripts/
+specs/
 ```
-semantic-kernel-sample-rag-api/
-├── .editorconfig               # Code style (braces, naming, formatting)
-├── .github/                    # GitHub config (e.g. workflows)
-├── Directory.Build.props       # EnforceCodeStyleInBuild; StyleCop.Analyzers for all .csproj
-├── stylecop.json               # StyleCop settings (referenced by Infrastructure)
-├── SampleRag.API/              # Web host, endpoints, filters, middleware
-│   ├── Endpoints/              # Minimal API route groups (Chats, Messages, Documents, Files, KnowledgeScopes)
-│   ├── Filters/                # Endpoint filters (DocumentUpload, File, ScopeUserAccess)
-│   ├── Hubs/                   # SignalR hub (DocumentsIndexingHub — not registered)
-│   ├── Middleware/             # DevAuthHandler
-│   └── Properties/
-├── SampleRag.Application/      # Application services, jobs, Semantic Kernel plugins
-│   ├── Factories/              # PromptExecutionSettingsFactory
-│   ├── Jobs/                   # ChunkVectorizationJob, DocumentChunkingJob (Quartz)
-│   ├── Plugins/                # TimePlugin, RetrievalPlugin (Kernel plugins)
-│   └── Services/               # DocumentService, DocumentChunkService, MessagesService, KnowledgeScopeUserService
-├── SampleRag.Di/               # DI composition root (MongoDB, Qdrant, Kernel, Mapster)
-│   └── Mapping/                # Mapster config (Message↔ChatMessageContent, tool calls, etc.)
-├── SampleRag.Domain/            # Entities, DTOs, interfaces, config models
-│   ├── Interfaces/             # IRepository, IVectorRepository, IFileRepository, service contracts
-│   │   ├── Factories/
-│   │   └── Services/
-│   ├── Models/                 # Domain entities and configs
-│   │   ├── Abstractions/       # IEntity<TId>, IVectorEntity<TId,TVector>, IEntityWithScopeId
-│   │   ├── Configs/            # DbSettings, VectorDbSettings, GenAiProviderSettings, JwtSettings
-│   │   └── Enums/              # GenerationStep, AiTool
-│   └── RequestModels/          # UploadDocumentRequestModel, SendMessageRequest, CreateChatRequest, GetBatchByModel
-├── SampleRag.Infrastructure/   # Persistence, vector store, file storage, embedding generators
-│   ├── DataGenerators/         # SemanticKernelDataGenerator
-│   ├── EmbeddingGenerators/    # DocumentChunkEmbeddingGenerator, DocumentEmbeddingGenerator
-│   └── Repositories/
-│       ├── Files/              # LocalFileRepository
-│       ├── Mongo/              # MongoBaseRepository<T>, KnowledgeScopeRepository, KnowledgeScopeUserRepository
-│       └── Vector/             # QdrantDocumentChunkRepository
-├── Scripts/                    # docker.run-deps.bat, docker.run-api.bat, backup/restore
-└── specs/                      # Feature specifications and checklists
-```
 
-**Directory purposes**
+- `SampleRag.API` contains the host entry point, endpoint groups, auth, CORS, rate limiting, and validation/access filters.
+- `SampleRag.Application` contains business orchestration, Quartz jobs, Semantic Kernel plugins, and invocation filters.
+- `SampleRag.Domain` contains shared contracts and request/response models used across layers.
+- `SampleRag.Infrastructure` contains persistence and external integration code.
+- `SampleRag.Di` is the composition root that wires everything together.
+- `Scripts` contains local orchestration scripts for dependencies and running the API.
+- `specs` contains the feature-spec documentation that should stay aligned with the actual endpoint contract.
 
-- **SampleRag.API** — ASP.NET Core host: OpenAPI/Swagger, rate limiter config, JWT or Dev auth, Minimal API endpoint groups. Validation via **endpoint filters** (`DocumentUploadValidationFilter`, `FileValidationFilter`, `ScopeUserAccessFilter`).
-- **SampleRag.Application** — Application logic: RAG streaming (`SemanticKernelDataGenerator` + Kernel), document ingestion and chunking (`DocumentService`, `DocumentChunkService`, jobs), chat/message handling (`MessagesService`). **Plugins** (`TimePlugin`, `RetrievalPlugin`) live under `Plugins/`. Depends on Domain only; services use **primary constructors**.
-- **SampleRag.Domain** — Shared kernel: entities and request DTOs; attribute-free classes; vector entities implement `IVectorEntity<Guid, float>`. Interfaces for repositories and application services are in Domain.
-- **SampleRag.Infrastructure** — Persistence: MongoDB generic repository, Qdrant vector repository (Microsoft.Extensions.VectorData), local file store, embedding generators. Uses primary constructors.
-- **SampleRag.Di** — Composition: wires MongoDB (Bson Guid serializer), Qdrant (collections ensured at startup), Semantic Kernel (Ollama chat + embeddings), Mapster, and all application/infrastructure services.
+Assessment:
 
-**Code organization**
+- The layering is good for a modular API. The dependency direction is mostly easy to follow, and the host stays thin.
+- The structure is a little less strict than a pure domain-driven system because HTTP request models live in `Domain`. That is acceptable for a small API, but it blurs the line between domain contracts and transport contracts.
+- Endpoint logic is grouped by resource, which helps discoverability.
+- Filters are split by purpose, which is a good fit for the access-control model.
+- `SampleRag.Application` is doing several jobs at once: orchestration, plugins, filters, and jobs. That is not wrong, but it means the folder needs discipline so it does not become a catch-all.
 
-The solution follows **Clean Architecture** (API → Di → Application + Infrastructure; Application and Infrastructure depend on Domain). Grouping is by **layer**. Endpoints are grouped by resource in static classes; validation is centralized in endpoint filters. **Chats** are handled directly by endpoints injecting `IRepository<Guid, Chat>` (no dedicated ChatService).
+## Technology stack
 
----
+Runtime and language:
 
-## 🛠 Technology Stack
+- .NET 10 / `net10.0` across all projects
+- nullable reference types enabled
+- implicit usings enabled
+- primary constructors used in many services and repositories
+- async streams used for chat response streaming
+- `InvariantGlobalization=true` on the API host
+- `PublishAot=false`
 
-| Category | Technology | Version / notes |
-|----------|------------|------------------|
-| **Framework** | ASP.NET Core (Minimal API) | net10.0 |
-| **Runtime** | .NET | 10.0 |
-| **DI** | Microsoft.Extensions.DependencyInjection | Via `WebApplication.CreateSlimBuilder`; registration in SampleRag.Di |
-| **Data access** | MongoDB.Driver | 3.6.0; no EF Core |
-| **Vector store** | Qdrant (Microsoft.Extensions.VectorData.Abstractions, Semantic Kernel connector) | SK 1.72.0-preview; Qdrant.Client 1.17.0 |
-| **AI / embeddings** | Microsoft Semantic Kernel, Ollama | SK 1.72.0; OllamaSharp 5.4.16; Ollama connector 1.72.0-alpha; embeddings e.g. mxbai-embed-large (1024 dims) |
-| **Auth** | JWT Bearer or Dev handler | `JwtSettings.Enabled` → JWT (Authority, Audience, Issuer); else `DevAuthHandler` scheme |
-| **API docs** | Swagger/OpenAPI (Swashbuckle) | 10.1.4; OpenAPI in Development only |
-| **Mapping** | Mapster / MapsterMapper | 7.4.0; global config and Scoped IMapper in Di |
-| **Scheduling** | Quartz | 3.15.1 (Application; jobs not wired in Program.cs) |
-| **MediatR** | MediatR | 14.0.0 (referenced in Application; no handlers found) |
-| **Testing** | — | No test projects in solution |
+Build and code-style tooling:
 
-**External services:** MongoDB (primary store), Qdrant (vector DB; collections ensured at startup), Ollama (LLM and embeddings). File storage: **local filesystem** under `wwwroot/assets/documents`. Scripts: `Scripts/docker.run-deps.bat` for Qdrant, MongoDB, Ollama containers.
+- `Directory.Build.props` enables `EnforceCodeStyleInBuild`
+- `AnalysisLevel=latest-recommended`
+- `StyleCop.Analyzers` is applied solution-wide
+- `.editorconfig` enforces folder/name alignment, braces, primary constructors, PascalCase, and namespace conventions
+- warnings are not treated as errors, so style is enforced more than correctness
 
----
+Key packages and why they matter:
 
-## 🏗 Architecture
+- `Microsoft.AspNetCore.Authentication.JwtBearer` - JWT auth
+- `Swashbuckle.AspNetCore` and `Microsoft.AspNetCore.OpenApi` - OpenAPI/Swagger
+- `Serilog` and Serilog sinks/enrichers - request and application logging
+- `Mapster` - object adaptation across API, domain, and Semantic Kernel boundaries
+- `Microsoft.SemanticKernel` plus Ollama and Qdrant connectors - LLM orchestration and vector retrieval
+- `OllamaSharp` - Ollama integration
+- `MongoDB.Driver` - primary document store
+- `Microsoft.Extensions.VectorData.Abstractions` and `Qdrant.Client` - vector store abstraction and search
+- `Quartz` - background jobs for chunking and vectorization
+- `PdfPig` - document extraction support
+- `MediatR` - referenced but not central to the current runtime flow
 
-**Layered flow**
+External services:
 
-- **API** — Endpoints inject application services or repositories; return `Results.*`; stream `IAsyncEnumerable<MessagePart>` for chat. Validations (document upload, file size/type, scope access) are in **endpoint filters**.
-- **Application** — DocumentService, DocumentChunkService, MessagesService, KnowledgeScopeUserService, ChatService; depend on `IRepository<Guid, T>`, `IVectorRepository<DocumentChunk>`, `IFileRepository`, `IDataGenerator`, Kernel. Services use **primary constructors**. Chats: create/list/delete/add-owner are in **ChatsEndpoints** using **IChatService**.
-- **Domain** — Entities (`Chat`, `Message`, `Document`, `DocumentChunk`, `KnowledgeScope`) implement `IEntity<Guid>`; vector models also `IVectorEntity<Guid, float>`. Interfaces for repositories and services in Domain.
-- **Infrastructure** — `MongoBaseRepository<T>` (primary constructor; protected `_collection`), `QdrantDocumentChunkRepository` (VectorStoreCollectionDefinition: Id, PageNumber, ChunkIndex, Vector 1024, CosineSimilarity, Hnsw), `LocalFileRepository`, embedding generators, `SemanticKernelDataGenerator`.
+- MongoDB for primary persistence
+- Qdrant for vector search
+- Ollama for chat completion and embeddings
+- local filesystem under `wwwroot/assets/documents` for uploaded files
 
-**Dependency injection**
+## Design patterns & architecture
 
-- **SampleRag.Di** registers repositories and application services (Transient), `IMongoDatabase` and settings (Singleton), Kernel and Qdrant vector store. `EnsureCollectionsExistsAsync` runs at startup to create missing Qdrant collections (vector size, distance, quantization from config). Kernel and Qdrant configured via `ConfigureAiDependencies` and `ConfigureDependencies` from Program.cs.
+### Layered architecture / Clean Architecture
 
-**Repository pattern**
+The solution follows a layered design with `API -> Di -> Application + Infrastructure -> Domain`. That is the strongest architectural feature in the repo. The API host remains mostly declarative, while persistence and AI orchestration are pushed out of the route handlers.
 
-- Generic `IRepository<TId, TModel>`: `AddAsync`, `UpdateAsync`, `RemoveByIdsAsync`, `GetByIdsAsync`, `GetBatchByAsync(Expression<Func<TModel, bool>>?, int?)`. Implemented by `MongoBaseRepository<T>` (collection name = `typeof(TModel).Name`). `IVectorRepository<DocumentChunk>`: `UpsertChunksAsync`, `RetrieveChunksAsync` (by query or scopeId+query), `RemoveByAsync(documentId)`.
+This is a good fit for an internal API because it makes the runtime graph easy to reason about and keeps cross-cutting concerns centralized. The downside is that some transport contracts still live in `Domain`, so the boundary is practical rather than pure.
 
-**Endpoint organization**
+### Dependency injection and composition root
 
-- Static classes per resource: `ChatsEndpoints`, `MessagesEndpoints`, `DocumentsEndpoints`, `FilesEndpoints`, `KnowledgeScopesEndpoints`, `FeedbacksEndpoints`. Route prefixes: `api/chats`, `api/messages`, `api/documents`, `api/files`, `api/knowledgescopes`, `api/feedbacks`. Chats and Messages use `.RequireAuthorization()`; Chats use `ScopeUserAccessFilter`; Documents use `DocumentUploadValidationFilter` and `FileValidationFilter`. Knowledge scope create/user management use `RequireAdministrator`. Document and Messages/filter auth are commented out in code.
+`SampleRag.Di` is a real composition root. It registers MongoDB, Qdrant, Semantic Kernel, the file repository, the service layer, and background jobs. The host program only calls the registration methods.
 
-**Middleware**
+That placement is correct. It keeps the API host readable and makes the wiring easy to audit. The main caution is that the composition layer is now the place where many subsystems meet, so startup behavior and registration order matter.
 
-- `app.UseAuthentication()` and `app.UseAuthorization()`. Custom middleware sets `X-Content-Type-Options: no-sniff`. Rate limiter (fixed window: 4 req/12s, queue 2) is configured but **not applied** (no `app.UseRateLimiter()` or endpoint policy).
+### Repository pattern
 
-**Error handling and validation**
+MongoDB and Qdrant are both wrapped behind repository abstractions. Mongo persistence is handled by generic and specialized repositories, while vector search is encapsulated in `QdrantDocumentChunkRepository`.
 
-- No global exception handler. Validation: **endpoint filters** only. Repository handles `MongoBulkWriteException` by returning successfully inserted items.
+This is a sensible use of the repository pattern here because the app has two very different persistence models:
 
----
+- document records and access data in MongoDB
+- chunk embeddings and similarity search in Qdrant
 
-## 🔌 API Design & Endpoints
+The pattern is mostly correct, but it should stay narrow. The repository interfaces should describe storage behavior, not business rules.
 
-**HTTP methods and REST usage**
+### Endpoint filters as policy objects
 
-- **POST** `api/chats` — create chat (body: `CreateChatRequest`: Name, ScopeId, OwnerIds?); 201 Created; `ScopeUserAccessFilter`.
-- **POST** `api/chats/filter` — list chats (body: `GetChatsByModel`: lastId, batchSize, scopeId?); 200 OK.
-- **POST** `api/chats/{id}/owners` — add owner (body: `AddChatOwnerRequest`: UserId); 204. **PATCH** `api/chats/{id}/name/generate` — not implemented.
-- **DELETE** `api/chats/{id}` — 204 No Content.
-- **POST** `api/messages` — send message (body: `SendMessageRequest`: ChatId, Text); returns streaming `IAsyncEnumerable<MessagePartResponse>`.
-- **POST** `api/messages/filter` — list messages (body: `GetMessagesByModel`); 200 OK.
-- **POST** `api/documents` — upload document (body: `UploadDocumentRequestModel`: Name, ScopeId, File base64); 201 Created; filters for validation and file rules.
-- **POST** `api/documents/filter` — list documents; **POST** `api/documents/filter/ids` — by ids; **DELETE** `api/documents/{id}`, `api/documents/chunks`, `api/documents/chunks/embeddings`.
-- **GET** `api/files/assets/documents/{fileName}` — file download (PDF).
-- **POST** `api/knowledgescopes` — create scope(s) (RequireAdministrator); **POST** `api/knowledgescopes/filter` — list with `GetBatchByModel`; **POST** `api/knowledgescopes/{id}/users`, **DELETE** `api/knowledgescopes/{id}/users/{userId}`.
-- **POST** `api/feedbacks` — submit feedback (body: `FeedbackRequest`: MessageId, IsLike); **POST** `api/feedbacks/filter` — list feedback.
+Endpoint filters are used well and consistently for:
 
-**Request/Response models**
+- validating request bodies
+- enforcing scope access
+- checking chat access
+- verifying route-scope ownership for file download
 
-- Request DTOs in Domain: `UploadDocumentRequestModel` (Name, ScopeId, File with base64 Content + FileName), `SendMessageRequest` (ChatId, Text), `CreateChatRequest` (Name, ScopeId, OwnerIds?), `CreateScopeRequest` (Name, UsersIds), `GetBatchByModel` (LastId, BatchSize), `GetChatsByModel`, `GetDocumentsByModel`, `GetMessagesByModel`, `GetFeedbackByModel`, `AddScopeUserRequest` (UsersId?), `AddChatOwnerRequest` (UserId), `FeedbackRequest` (MessageId, IsLike). `CreateChatRequest` implements `IEntityWithScopeId` for `ScopeUserAccessFilter`.
+This is a strong design choice because it keeps access policy near the boundary and avoids repeating checks in every handler. The implementation is more explicit than a middleware-only approach and better aligned with endpoint-specific rules.
 
-**File upload**
+### Semantic Kernel plugin pipeline
 
-- JSON body with base64 `File.Content` and `File.FileName`. `FileValidationFilter` enforces size limit (constant 1.5 MB; error message says "20 MB" — **inconsistent**), PDF extension and content-type allowlist. Stored via `IFileRepository.SaveAsync` under wwwroot.
+Semantic Kernel is used as a plugin-driven orchestration layer rather than as a black box. The app registers typed plugins such as `TimePlugin` and `RetrievalPlugin`, plus prompt-directory YAML plugins from config. Function-choice behavior is selected by execution setting, which gives the app a controlled tool-use pipeline.
 
-**Pagination / filtering**
+This is the right abstraction level for a RAG application. The weakness is that the current model-facing function contract is not fully sanitized for hidden parameters. The runtime can inject values, but the metadata path still needs tightening.
 
-- Cursor-style: filter models use `BatchSize` and optional `LastId` (Guid). List operations use POST `.../filter` with these models. No GET list endpoints. No URL versioning or HATEOAS.
+### Adapter / mapping layer
 
-**Rate limiting**
+Mapster is used throughout the solution to adapt between request models, entities, and Semantic Kernel types. That works as a light adapter layer and keeps endpoint handlers small.
 
-- Fixed window configured in Program.cs; **not applied** (no `UseRateLimiter()` or policy on routes).
+This is good placement for Mapster because the project has many DTO-to-entity conversions and response-shaping steps. The trade-off is that mapping rules can become implicit unless they are kept close to the domain model or covered by tests.
 
----
+### Streaming pipeline
 
-## 📦 Data Layer and Persistence
+Message generation is streamed to the client using SSE. That is the correct UX choice for a chat-first API because it improves perceived latency and keeps the client responsive while the model is still generating.
 
-**Database**
+The important point is that streaming does not eliminate latency; it only improves time-to-first-token and perceived responsiveness. Retrieval, embedding, chat history loading, prompt assembly, and function invocation still all happen before or during streaming.
 
-- **MongoDB**: connection and database from `DbSettings`. `BsonSerializer` registers `GuidSerializer(GuidRepresentation.Standard)` in Di before client creation.
+### Background jobs
 
-**Migration strategies**
+Quartz jobs are part of the ingestion pipeline and help keep document processing off the request path. That is a good architectural fit for response-time goals because it separates upload acknowledgement from heavier chunking/vectorization work.
 
-- No EF Core. MongoDB is schema-less; schema implied by entity types. Qdrant collections **ensured at startup** in Di: `EnsureCollectionsExistsAsync` lists collections and recreates missing ones with `VectorParams` (Size, Distance, QuantizationConfig from `VectorDbSettings.Collections`). Quantization: Binary, Scalar, or Product via `GetQuantizationConfig`.
+## Code excerpts worth noting
 
-**Data modeling**
+The message endpoint is a good example of the boundary style: auth, scope checks, and chat checks are pushed into filters, while the handler stays thin.
 
-- **Code-first**: entities in Domain, attribute-free classes. MongoDB collection name = type name. Vector store: `VectorStoreCollectionDefinition` with key/data/vector properties in `QdrantDocumentChunkRepository`.
-
-**File storage**
-
-- **Local filesystem**: `LocalFileRepository` under `WebRootPath` + `assets/documents`; saves base64-decoded bytes.
-
-**Caching / transactions**
-
-- No Redis or in-memory cache. No explicit transaction or distributed transaction handling.
-
----
-
-## 📋 Logging and Observability
-
-- **Logging**: Default ASP.NET Core logging (appsettings: Default Information, Microsoft.AspNetCore Warning). No Serilog/NLog or structured logging.
-- **Destinations**: Console; no file or external sink (Seq, ELK, Application Insights).
-- **Correlation**: No correlation ID or trace IDs in logs.
-- **Health checks**: None (`MapHealthChecks`/`AddHealthChecks` not used).
-- **Monitoring**: No custom metrics or APM.
-
----
-
-## ✅ Code Quality
-
-- **Linter / style**: **`.editorconfig`** at repo root: braces, naming (PascalCase, interface prefix `I`), formatting, `csharp_prefer_braces = true`, `csharp_style_namespace_declarations = block_scoped`, primary constructor preference. **StyleCop.Analyzers** (1.1.118) applied via **Directory.Build.props**; **stylecop.json** referenced in Infrastructure for ordering/layout. **Directory.Build.props**: `EnforceCodeStyleInBuild`, `AnalysisLevel = latest-recommended`.
-- **Naming**: Consistent PascalCase. **Typo**: `GenerateAiResponce` (should be `GenerateAiResponse`) in `IMessagesService` and `MessagesService`.
-- **Type safety**: Strong C# typing; nullable reference types enabled. Domain models and request models in Domain.
-- **Tests**: No test projects or test files.
-- **API documentation**: Swagger enabled; no XML docs on endpoints or models in reviewed files.
-- **Notable**: Rate limiter not applied; SignalR hub `DocumentsIndexingHub` present but not registered (`AddSignalR`/`MapHub` not in Program); MediatR and Quartz referenced but not wired. FileValidationFilter: 1.5 MB constant vs "20 MB" message. **RetrievalPlugin** currently returns mock chunks (`Task.FromResult` with fake `DocumentChunk[]`) instead of calling `chunkRepository.RetrieveChunksAsync` — placeholder for RAG retrieval.
-
----
-
-## 🔧 Key Components
-
-### 1. ChatsEndpoints + ScopeUserAccessFilter (API)
-
-Chat create/list/delete/add-owner with scope access enforced by filter; **IChatService** injected.
-
-```csharp
-group.MapPost("/", async ([FromBody] CreateChatRequest request, IChatService chatService, ClaimsPrincipal claims, CancellationToken ct) =>
+```30:39:SampleRag.API/Endpoints/MessagesEndpoints.cs
+group.MapPost("/", ([FromBody] SendMessageRequest message, IMessagesService messagesService, ClaimsPrincipal user) =>
 {
-    var chat = (request, claims).Adapt<Chat>();
-    var result = await chatService.AddAsync(chat);
-    // ... Results.Created
+    var userId = user.Adapt<string>();
+
+    return Results.ServerSentEvents(messagesService.GenerateAiResponce(message, userId));
 })
     .RequireAuthorization()
-    .AddEndpointFilter<ScopeUserAccessFilter>()
+    .RequireRateLimiting("send-message")
+    .AddEndpointFilter<BodyScopeAccessFilter>()
+    .AddEndpointFilter<ChatAccessFilter>();
 ```
 
-**Purpose**: Create chat with optional owner list; scope access via `IKnowledgeScopeUserService.HasAccessAsync`. List via POST `/filter` with `GetChatsByModel`; add owner via POST `{id}/owners` with `AddChatOwnerRequest`. **Dependencies**: `IChatService`, `ScopeUserAccessFilter` (uses `IEntityWithScopeId`).
+The body-scope filter is the main access-control building block for request models that carry a `ScopeId`.
 
----
-
-### 2. MessagesService (Application)
-
-Streaming RAG response: new chat creation, history load, Semantic Kernel streaming, message persist.
-
-```csharp
-public async IAsyncEnumerable<MessagePart> GenerateAiResponce(SendMessageRequest request, string userId)
-{
-    var userMessage = request.Adapt<Message>();
-    if (userMessage.ChatId.Equals(Guid.Empty))
-    {
-        var chat = userMessage.Adapt<Chat>();
-        await chatRepository.AddAsync(chat);
-        yield return chat.Adapt<MessagePart>();
-    }
-    await foreach (var part in GenerateAiMessage(userMessage))
-        yield return part;
-}
-```
-
-**Purpose**: Orchestrates chat creation when needed and streaming LLM response via `IDataGenerator.GenerateStreamingData(messagesHistory.Append(userMessage), "naive-rag")`. **Dependencies**: IDataGenerator, IRepository<Guid, Chat>, IRepository<Guid, Message>.
-
----
-
-### 3. QdrantDocumentChunkRepository (Infrastructure)
-
-Vector store access with prescribed collection definition and scope-aware retrieval.
-
-```csharp
-public class QdrantDocumentChunkRepository(
-    IEmbeddingGenerator<DocumentChunk, Embedding<float>> embeddingGenerator,
-    VectorStore vectorStore,
-    VectorDbSettings settings) : IVectorRepository<DocumentChunk>
-{
-    private readonly VectorStoreCollection<Guid, DocumentChunk> vectorCollection =
-        vectorStore.GetCollection<Guid, DocumentChunk>("document-chunks", new VectorStoreCollectionDefinition
-        {
-            EmbeddingGenerator = embeddingGenerator,
-            Properties =
-            [
-                new VectorStoreKeyProperty("Id", typeof(Guid)),
-                new VectorStoreDataProperty("PageNumber", typeof(int)),
-                new VectorStoreDataProperty("ChunkIndex", typeof(int?)),
-                new VectorStoreVectorProperty("Vector", typeof(ReadOnlyMemory<float>), dimensions: 1024)
-                { DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw },
-            ]
-        });
-    // UpsertChunksAsync, RetrieveChunksAsync(query), RetrieveChunksAsync(scopeId, query), RemoveByAsync(documentId)
-}
-```
-
-**Purpose**: Upsert/search/delete document chunks in Qdrant; scope-filtered overload for RAG. **Inputs/Outputs**: Chunks for upsert; query + topK (and optional scopeId) for search; documentId for delete.
-
----
-
-### 4. ScopeUserAccessFilter (API)
-
-Endpoint filter for scope-based access using `IKnowledgeScopeUserService.HasAccessAsync`.
-
-```csharp
-public class ScopeUserAccessFilter(
-    IKnowledgeScopeUserService scopeAccessService,
-    ClaimsPrincipal user) : IEndpointFilter
+```8:35:SampleRag.API/Filters/BodyScopeAccessFilter.cs
+public class BodyScopeAccessFilter(
+    IKnowledgeScopeService scopeService) : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var data = context.Arguments.OfType<IEntityWithScopeId>().FirstOrDefault();
-        if (data is null) return Results.BadRequest("Entity with ScopeId required");
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub") ?? "";
-        if (!await scopeAccessService.HasAccessAsync(data.ScopeId, userId))
-            return Results.Json(new { error = "No access to scope" }, statusCode: 403);
-        return await next.Invoke(context);
+        if (data is null || data.ScopeId == Guid.Empty)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["scopeId"] = ["Scope ID is required"],
+            });
+        }
+
+        var role = context.HttpContext.User.Adapt<UserRole>();
+```
+
+The hidden-argument mechanism for Semantic Kernel is real, but it is split across invocation filters and function registration. That is useful, but not yet fully hidden from the model-facing contract.
+
+```5:14:SampleRag.Application/Filters/Invocation/NonAiArgumentsApplyingFilter.cs
+public class NonAiArgumentsApplyingFilter(IDictionary<string, object> nonAiArguments) : IFunctionInvocationFilter
+{
+    public async Task OnFunctionInvocationAsync(FunctionInvocationContext context, Func<FunctionInvocationContext, Task> next)
+    {
+        foreach (var pair in nonAiArguments)
+        {
+            context.Arguments[pair.Key] = pair.Value;
+        }
+
+        await next.Invoke(context);
     }
 }
 ```
 
-**Purpose**: Ensures caller has access to the scope of the entity before running the endpoint. **Dependencies**: IKnowledgeScopeUserService, ClaimsPrincipal.
-
----
-
-### 5. ServiceCollectionExtensions.ConfigureQdrant (Di)
-
-Qdrant registration and collection ensure at startup.
-
-```csharp
-services.AddQdrantVectorStore(_ => qdrantClient, sp => new QdrantVectorStoreOptions { ... })
-    .AddQdrantCollection<Guid, DocumentChunk>("document-chunks")
-    .AddQdrantCollection<Guid, ApiDocument>("documents")
-    .AddQdrantCollection<Guid, KnowledgeScope>("knowledge-groups");
-_ = Task.Run(() => EnsureCollectionsExistsAsync(qdrantClient, vectorDbSettings));
+```52:77:SampleRag.Di/Registries/SemanticKernelRegistry.cs
+private static void ConfigurePromptExecutionSettings(this IServiceCollection services)
+{
+    services.AddSingleton(sp =>
+    {
+        var kernel = sp.GetRequiredService<Kernel>();
+        /*var transformedFunctions = kernel.Plugins
+            .SelectMany(plugin => plugin.Select(f =>
+                KernelFunctionFactory.CreateFromMethod(
+                    method: async (Kernel kernel, KernelFunction currentFunction, KernelArguments currentArgs, CancellationToken cancellationToken) =>
+                    {
+                        return await currentFunction.InvokeAsync(kernel, currentArgs, cancellationToken);
+                    },
+                    functionName: f.Name,
+                    description: f.Description,
+                    parameters: [.. f.Metadata.Parameters.Where(p => p.Name != "scopeId")],
+                    returnParameter: f.Metadata.ReturnParameter))).ToArray();*/
 ```
 
-**Purpose**: Single place for Qdrant client, vector store, collections, and startup collection creation with config-driven vector size, distance, and quantization.
+The scoped vector search path is another good example of the app’s architecture, and also one of the main latency risks.
 
----
+```69:104:SampleRag.Infrastructure/Repositories/Vector/QdrantDocumentChunkRepository.cs
+public async Task<IEnumerable<DocumentChunk>> RetrieveChunksAsync(Guid scopeId, string query, int topK = 5, CancellationToken ct = default)
+{
+    using var qdrantClient = new QdrantClient(new Uri(settings.Url));
 
-## 🔒 Security and Validation
+    var queryEmbedding = await embeddingGenerator.GenerateAsync(
+    [
+        new DocumentChunk
+        {
+            Text = query,
+        },
+    ], cancellationToken: ct);
 
-- **Authentication/Authorization**: **JWT** when `JwtSettings.Enabled` (Authority, Audience, Issuer); otherwise **Dev** scheme (`DevAuthHandler`). Policies: `RequireAdministrator` for knowledge-scope create and user management. Chats and Messages use `RequireAuthorization()`.
-- **Input validation**: **Endpoint filters** only (no FluentValidation or DataAnnotations on models): `DocumentUploadValidationFilter` (name length, scopeId, file presence), `FileValidationFilter` (content, size, PDF extension), `ScopeUserAccessFilter` (scope access via `HasAccessAsync`).
-- **File upload**: Size and PDF-only in `FileValidationFilter`; error message says 20 MB but constant is 1.5 MB — align constant/message.
-- **CORS**: Not configured in reviewed code.
-- **HTTPS**: JwtSettings has `RequireHttpsMetadata` (configurable).
-- **Sensitive data**: Config in appsettings.json (MongoDB, Qdrant, Ollama URLs); no secrets manager shown. Header `X-Content-Type-Options: no-sniff` set.
+    var filter = new Filter();
+    filter.Must.Add(new Condition()
+    {
+        Field = new FieldCondition
+        {
+            Key = nameof(DocumentChunk.ScopeIdValue),
+            Match = new Match
+            {
+                Keyword = scopeId.ToString(),
+            },
+        },
+    });
+```
 
----
+## API behavior & endpoint design
 
-## ⚙️ Performance and Infrastructure
+### Chats
 
-- **Build**: SDK `Microsoft.NET.Sdk.Web` (API) and `Microsoft.NET.Sdk` (others); net10.0; nullable and implicit usings; PublishAot false. **Directory.Build.props**: EnforceCodeStyleInBuild, StyleCop.Analyzers for all .csproj.
-- **Dev setup**: **Scripts/docker.run-deps.bat** for Qdrant, MongoDB, Ollama containers; **Scripts/docker.run-api.bat** for API. No single-command dev script in root.
-- **CI/CD**: `.github` present; workflow content not verified.
-- **Docker**: Scripts use `docker run` for qdrant, mongodb, ollama with volumes and resource limits. No Dockerfile for the API in the listed tree.
-- **Health/monitoring**: No health checks or readiness/liveness endpoints.
+`api/chats` is auth-protected and scope-aware.
 
----
+- `POST /api/chats` creates a chat
+- `POST /api/chats/filter` returns a filtered batch
+- `POST /api/chats/{id}/owners` adds a participant, but only the current owner can do it
+- `PATCH /api/chats/{id}/name/generate` is present but not implemented
+- `DELETE /api/chats/{id}` removes a chat
 
-## 📋 Summary & Recommendations
+The design is sensible, although the route surface is not purely RESTful because `filter` endpoints use POST and ownership management uses a custom sub-route. That choice is reasonable for cursor-style paging and rule-based updates.
 
-**Summary**
+### Messages
 
-SampleRag is a **Clean Architecture** ASP.NET Core Minimal API for a RAG demo: chats (create/list/delete/add-owner via **IChatService**), messages (streaming LLM via Semantic Kernel + Ollama), document upload (base64 JSON → local disk + MongoDB), knowledge scopes (api/knowledgescopes) with user association, feedback (api/feedbacks), and file download. Persistence: MongoDB and local files; vector store: Qdrant with startup collection ensure. **Validation is in endpoint filters**; models in Domain; vector entities implement `IVectorEntity`; Application/Infrastructure use primary constructors. Auth: JWT or Dev handler. List operations use **POST …/filter** with filter models (no GET list endpoints). **Plugins** in `Application/Plugins/`. Rate limiter, SignalR hub, MediatR, and Quartz are configured or referenced but not fully wired. **RetrievalPlugin** currently returns mock data; vector retrieval exists in `QdrantDocumentChunkRepository.RetrieveChunksAsync(scopeId, query)`.
+`api/messages` is the heart of the RAG flow.
 
-**Strengths**
+- `POST /api/messages` streams the answer as SSE
+- `POST /api/messages/filter` lists message history
+- `POST /api/messages/complexity` and `POST /api/messages/language` are utility endpoints for analysis/pre-processing
 
-- Clear layer separation and dependency rule (API → Di → Application + Infrastructure → Domain).
-- Endpoint filters for validation and scope access keep handlers thin.
-- Vector store and collection definition with EnsureCollectionsExistsAsync; scope-aware retrieval in repository.
-- Domain-centric models and primary constructors in Application/Infrastructure.
-- CreateChatRequest with OwnerIds and IEntityWithScopeId for consistent scope filtering.
+The send path uses both `BodyScopeAccessFilter` and `ChatAccessFilter`, and it is rate limited with the `send-message` policy. That is a good boundary for protecting the model and storage layers, but the current fixed-window policy is strict enough that it can become a UX bottleneck if the chat is used interactively.
 
-**Recommendations**
+Response-language behavior is not enforced at the endpoint boundary. In practice, that means the language will still depend on prompt behavior and model compliance unless the orchestration layer explicitly adds a language instruction or post-processing rule.
 
-1. **Apply rate limiting**: Call `app.UseRateLimiter()` and/or attach a policy to endpoint groups.
-2. **Fix typo**: Rename `GenerateAiResponce` → `GenerateAiResponse` in IMessagesService and MessagesService.
-3. **Align file size**: Make FileValidationFilter use 20 MB (or fix error message to match 1.5 MB) and document limit in one place.
-4. **Wire RetrievalPlugin**: Replace mock return in `RetrieveRelevantChunksAsync` with `chunkRepository.RetrieveChunksAsync` (and pass scope/query from context if needed).
-5. **Remove or use optional pieces**: Register and map DocumentsIndexingHub if needed, or remove; same for MediatR and Quartz if not planned.
-6. **Add tests**: Introduce a test project (e.g. xUnit) for services, repositories, and filters.
-7. **Observability**: Add health checks (MongoDB, Qdrant, optional Ollama), structured logging, and correlation IDs for production.
-8. **Security**: Enforce HTTPS and CORS where needed; consider multipart upload and stronger content validation for production.
+### Documents
 
-**Project complexity**
+`api/documents` is admin-oriented and uses both validation and access filters.
 
-Suitable for **mid-level** developers: Clean Architecture, async streaming, filter-based validation, and vector/RAG concepts are clear; hardening (tests, observability, consistent use of configured features, real RAG in RetrievalPlugin) requires some discipline.
+- `POST /api/documents` uploads a document
+- `PUT /api/documents` updates document metadata and file location
+- `POST /api/documents/filter` lists documents
+- `POST /api/documents/filter/ids` fetches by ids
+- `DELETE /api/documents/{id}` removes a document
+- `DELETE /api/documents/chunks` clears chunk state
+- `DELETE /api/documents/chunks/embeddings` clears vector embeddings
+
+The upload path stores the file on disk under `assets/documents/{scopeId}` and persists metadata in MongoDB. Chunking and vectorization are separated into jobs, which helps keep upload latency under control.
+
+### Files
+
+`api/files` is used for scoped file download.
+
+- `GET /api/files/assets/documents/{scopeId}/{fileName}` returns a PDF stream
+
+The route is protected by a route-scope access filter, which is a clean fit because this authorization rule is driven by the URL rather than by the request body.
+
+### Knowledge scopes
+
+`api/knowledgescopes` is the administrative layer for scope creation and updates.
+
+- `POST /api/knowledgescopes` creates scopes
+- `PUT /api/knowledgescopes/{id}` updates a scope
+- `POST /api/knowledgescopes/filter` lists scopes in batches
+
+This group is role-sensitive and is the root of the app’s authorization model. Scope checks are not incidental here; they are a first-class concept.
+
+### Feedback
+
+`api/feedbacks` captures user reactions.
+
+- `POST /api/feedbacks` submits feedback
+- `POST /api/feedbacks/filter` lists feedback records
+
+This is a small surface, but it matters because it closes the loop for internal evaluation and relevance tuning.
+
+## Data flow and storage
+
+### MongoDB
+
+MongoDB is the primary transactional store. `MongoPersistanceRegistry` registers the driver, configures the GUID serializer, and maps document/vector entities so vector fields are not serialized into Mongo payloads.
+
+That is a good separation because Mongo stores business records, while Qdrant stores vector payloads and similarity state.
+
+### Qdrant
+
+Qdrant stores document chunks and powers semantic retrieval. The repository supports both generic query search and scope-filtered search. The scoped path is relevant because the API is not just doing semantic retrieval; it is doing semantically relevant retrieval constrained by access control.
+
+The main performance concern is that scoped search currently creates a new `QdrantClient` inside the repository method instead of reusing a shared client or collection path. That adds connection churn and makes response-time tuning harder.
+
+### Local file storage
+
+Uploaded document files are written to local disk under `wwwroot/assets/documents/{scopeId}`. The file repository abstraction is a good fit for this because it keeps the application code from depending directly on the filesystem.
+
+The main trade-off is operational: local disk is simple and fast, but it is not ideal if the app later needs horizontal scaling or shared storage.
+
+### Semantic Kernel orchestration
+
+`SemanticKernelDataGenerator` streams chat completions and can accept extra outer arguments. `MessagesService` uses that path to inject `scopeId` when it exists, which is the right shape for the requirement that the model should not have to know hidden function arguments.
+
+However, the current implementation only partially hides those arguments. The runtime injection exists, but the function metadata still needs to be trimmed or wrapped so the model-facing schema shows only the arguments it should reason about.
+
+That is the most important Semantic Kernel design issue in the repo.
+
+### Scope-based access flow
+
+The app uses three access patterns:
+
+- body-scope access for requests that carry a `ScopeId`
+- route-scope access for file download URLs
+- chat access for message send and message history
+
+That is a strong design because it keeps security policy aligned with the shape of the request rather than trying to force a single generic rule onto every endpoint.
+
+## Testing strategy
+
+There is no test project in the solution, and no test plan is currently scheduled.
+
+That means the current verification model is runtime/manual rather than automated. For this codebase, the lack of tests is not just a quality issue; it is also a latency and correctness risk because the most important behavior lives at boundaries:
+
+- scope filtering
+- message streaming
+- repository interactions
+- hidden Semantic Kernel arguments
+- response-language behavior
+
+Because tests are not planned, the gap should be acknowledged explicitly in the repo docs and in operational practice.
+
+## Test data: sources, builders, storage
+
+There is no formal test data strategy yet because there is no test suite.
+
+Current data shape is mostly runtime data:
+
+- document uploads are base64 JSON payloads
+- files are written to local disk
+- MongoDB documents are schema-light and entity-driven
+- Qdrant chunks are generated during ingestion and stored by vector properties
+
+If testing is introduced later, the best low-friction approach would be fixture builders for request models plus temp-folder/file-system isolation for file storage.
+
+## Documentation & discoverability
+
+The repository has useful docs in `README.md`, `project.md`, and `specs/001-demo-rag-api/`. That is a good foundation, but the docs need to stay in sync with the actual code.
+
+For discoverability:
+
+- `README.md` should stay concise and operational
+- `project.md` should stay technical and current
+- endpoint contracts in `specs/` should mirror the actual route surface
+
+The current solution is reasonably easy to navigate because folders map to runtime layers and endpoint groups map to route groups.
+
+## Code quality & maintainability
+
+Strengths in code quality:
+
+- nullable reference types are enabled
+- code style is enforced through `Directory.Build.props` and `.editorconfig`
+- primary constructors reduce boilerplate in services and repositories
+- Serilog is wired at startup, which helps with operational debugging
+- route groups are explicit and resource-oriented
+
+Current maintainability risks:
+
+- `TreatWarningsAsErrors=false`, so style is enforced more strongly than correctness
+- the typo `GenerateAiResponce` still exists in the public service contract
+- some support code looks experimental or half-finished, such as the commented function-signature transformation and the prompt render filter stub
+- the repository abstraction is useful, but the Qdrant scoped search path creates a performance hotspot
+- no automated tests means regressions will be harder to catch
+
+## Strengths
+
+- Clear layer separation between API, application, infrastructure, and domain
+- Good use of endpoint filters for validation and access control
+- SSE streaming is the right UX choice for chat responses
+- Scope-aware authorization is a first-class concern rather than an afterthought
+- Ingestion is split from request handling through Quartz jobs
+- Semantic Kernel is used as an orchestration layer, not as a monolith hidden inside endpoints
+- Logging, Swagger, CORS, and auth are wired centrally in the host
+
+## Weak points & risks
+
+- No automated tests or test project
+- Response language is not enforced deterministically in the message pipeline
+- The hidden Semantic Kernel argument pattern is only partially complete; the model-facing schema still needs to hide non-AI parameters
+- Scoped Qdrant retrieval creates a fresh client per call, which is a latency risk
+- The `send-message` rate limit is very strict and may hurt interactive chat UX if not tuned carefully
+- Some code is still experimental or incomplete, including the unimplemented chat-name generation path and the prompt render filter stub
+- `GenerateAiResponce` is still misspelled in the public API surface
+- The app depends on local file storage, which is simple but can become a deployment constraint
+
+## Recommendations
+
+1. Finish the hidden-parameter design for Semantic Kernel. Keep `scopeId` out of the model-facing function schema and inject it only at invocation time, so the LLM sees only the arguments it can actually reason about.
+2. Remove the per-call `QdrantClient` construction from scoped retrieval. Reuse a shared client or a shared collection path to cut overhead and make response time more predictable.
+3. Add explicit response-language control to the orchestration layer. Detect the request language early and pass an instruction or prompt variable so replies reliably match the user’s language.
+4. Revisit the `send-message` rate limit. The current fixed-window policy may protect resources, but it is probably too restrictive for normal chat usage unless the organization really wants that throttling.
+5. Add latency instrumentation around history load, retrieval, prompt assembly, tool invocation, and first-token streaming so response-time bottlenecks are visible.
+6. Clean up dormant or incomplete pieces such as the typo in `GenerateAiResponce`, the commented prompt-shaping code, and the placeholder render filter.
+7. If testing remains out of scope, document that explicitly and define a small manual smoke-check list for scope access, message streaming, and document retrieval so operational validation is at least repeatable.

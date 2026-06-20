@@ -20,6 +20,7 @@ public class QdrantDocumentChunkRepository(
             Properties =
             [
                 new VectorStoreKeyProperty("Id", typeof(Guid)),
+                new VectorStoreDataProperty("DocumentIdValue", typeof(string)),
                 new VectorStoreDataProperty("ScopeIdValue", typeof(string)),
                 new VectorStoreDataProperty("PageNumber", typeof(int)),
                 new VectorStoreVectorProperty("Vector", typeof(ReadOnlyMemory<float>), dimensions: 1024)
@@ -113,7 +114,7 @@ public class QdrantDocumentChunkRepository(
         {
             Field = new FieldCondition
             {
-                Key = nameof(DocumentChunk.DocumentId),
+                Key = nameof(DocumentChunk.DocumentIdValue),
                 Match = new Match()
                 {
                     Keyword = documentId.ToString(),

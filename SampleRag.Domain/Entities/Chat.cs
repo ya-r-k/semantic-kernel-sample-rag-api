@@ -24,4 +24,6 @@ public class Chat : IEntity<Guid>
     /// Last time the chat had a user message and AI reply; equals <see cref="Message.CreatedAt"/> of the latest AI message.
     /// </summary>
     public DateTime? LastUpdatedAt { get; set; }
+
+    public bool HasOutdatedSources { get; set; }
 }
