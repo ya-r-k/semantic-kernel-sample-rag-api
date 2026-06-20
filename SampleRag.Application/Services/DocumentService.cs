@@ -11,16 +11,18 @@ public class DocumentService(
     IFilterRepository<Guid, Document, GetDocumentsByModel> documentsRepository,
     IFileRepository fileRepository) : IDocumentService
 {
-    public async Task<Document?> AddAsync(UploadDocumentRequestModel request)
+    public async Task<IEnumerable<Document>> AddAsync(params UploadDocumentRequestModel[] request)
     {
-        var savingData = request.Adapt<Document>();
+        var savingData = request.Adapt<Document[]>();
+        for (var i = 0; i < request.Length; i++)
+        {
+            savingData[i].LocalLink = await fileRepository.SaveAsync(
+                Path.Combine("assets", "documents", request[i].ScopeId.ToString()),
+                request[i].File.FileName,
+                request[i].File.Content);
+        }
 
-        savingData.LocalLink = await fileRepository.SaveAsync(
-            Path.Combine("assets", "documents", request.ScopeId.ToString()),
-            request.File.FileName,
-            request.File.Content);
-
-        return (await documentsRepository.AddAsync([savingData])).FirstOrDefault();
+        return await documentsRepository.AddAsync(savingData);
     }
 
     public async Task<IEnumerable<Document>> GetBatchByAsync(GetDocumentsByModel model)

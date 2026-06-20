@@ -76,7 +76,8 @@ public static class ApplicationSecurityRegistry
             });
 
         services.AddAuthorizationBuilder()
-            .AddPolicy("RequireAdmin", policy => policy.RequireClaim("roles", "Admin", "SuperAdmin"));
+            .AddPolicy("RequireAdmin", policy => policy.RequireClaim("roles", "Admin", "SuperAdmin"))
+            .AddPolicy("RequireSuperAdmin", policy => policy.RequireClaim("roles", "SuperAdmin"));
     }
 
     public static void ConfigureCookieAuth(this IServiceCollection services)

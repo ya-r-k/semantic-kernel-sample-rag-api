@@ -5,7 +5,7 @@ namespace SampleRag.Domain.Interfaces.Services;
 
 public interface IDocumentService
 {
-    Task<Document?> AddAsync(UploadDocumentRequestModel request);
+    Task<IEnumerable<Document>> AddAsync(params UploadDocumentRequestModel[] request);
 
     Task UpdateAsync(Document[] items, string[] fields);
 

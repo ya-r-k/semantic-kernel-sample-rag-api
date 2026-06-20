@@ -26,7 +26,23 @@ public static class DocumentsEndpoints
                 : Results.StatusCode(StatusCodes.Status500InternalServerError);
         })
             .AddEndpointFilter<DocumentUploadValidationFilter>()
-            .AddEndpointFilter<FileValidationFilter>()
+            .Produces(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Accepts<UploadDocumentRequestModel>("application/json");
+
+        group.MapPost("/bulk", async (
+            [FromBody] UploadDocumentRequestModel[] documents,
+            IDocumentService documentsService,
+            CancellationToken ct) =>
+        {
+            var created = await documentsService.AddAsync(documents);
+            return created is not null && created.Any()
+                ? Results.Created($"/api/documents/filter/ids", created)
+                : Results.StatusCode(StatusCodes.Status500InternalServerError);
+        })
+            .RequireAuthorization("RequireSuperAdmin")
+            .AddEndpointFilter<BulkDocumentUploadValidationFilter>()
             .Produces(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)
